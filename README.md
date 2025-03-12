@@ -216,6 +216,13 @@ A primer on the basics of the application is as follows.
         </a>
     </td>
     <td align="center">
+        <a href="https://github.com/chrispavlopoulos">
+            <img src="https://avatars.githubusercontent.com/u/21095600?v=4" width="100;" alt="chrispavlopoulos"/>
+            <br />
+            <sub><b>chrispavlopoulos</b></sub>
+        </a>
+    </td>
+    <td align="center">
         <a href="https://github.com/Aegyo">
             <img src="https://avatars.githubusercontent.com/u/4183969?v=4" width="100;" alt="Aegyo"/>
             <br />
@@ -235,7 +242,8 @@ A primer on the basics of the application is as follows.
             <br />
             <sub><b>Natsume-197</b></sub>
         </a>
-    </td>
+    </td></tr>
+<tr>
     <td align="center">
         <a href="https://github.com/MarvNC">
             <img src="https://avatars.githubusercontent.com/u/17340496?v=4" width="100;" alt="MarvNC"/>
