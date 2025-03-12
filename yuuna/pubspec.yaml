@@ -142,7 +142,7 @@ dependencies:
       ref: 40464c75e908f57f458597ef4912f5273ab89b1a
       path: wakelock
   web_socket_channel: ^2.3.0
-  youtube_explode_dart: ^2.2.3
+  youtube_explode_dart: ^2.3.9
   
 dependency_overrides:
   collection: ^1.17.2
