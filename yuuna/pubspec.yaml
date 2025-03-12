@@ -156,6 +156,7 @@ dependency_overrides:
       url: https://github.com/diegotori/wakelock
       ref: 40464c75e908f57f458597ef4912f5273ab89b1a
       path: wakelock_windows
+  logging: 1.1.1
 
 dev_dependencies:
   build_runner: ^2.3.3
