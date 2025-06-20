@@ -34,7 +34,7 @@
 ---
 
 <p align="center" style="margin:0"><b>‍🧪 Latest Release:
-  <a href="https://github.com/arianneorpilla/jidoujisho/releases/tag/2.9.0-preview3">2.9.0-preview3</a>
+  <a href="https://github.com/arianneorpilla/jidoujisho/releases/tag/2.9.0-preview4">2.9.0-preview4</a>
 </b></p>
 
 <b>
