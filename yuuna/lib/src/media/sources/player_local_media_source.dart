@@ -2,9 +2,9 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:collection/collection.dart';
-import 'package:ffmpeg_kit_flutter/ffmpeg_kit.dart';
+import 'package:ffmpeg_kit_https_flutter/ffmpeg_kit.dart';
 import 'package:flutter/material.dart';
-import 'package:ffmpeg_kit_flutter/ffmpeg_session.dart';
+import 'package:ffmpeg_kit_https_flutter/ffmpeg_session.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_vlc_player/flutter_vlc_player.dart';
 import 'package:material_floating_search_bar/material_floating_search_bar.dart';

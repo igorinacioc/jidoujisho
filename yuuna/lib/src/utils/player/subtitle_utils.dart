@@ -1,7 +1,7 @@
 import 'dart:io';
 
-import 'package:ffmpeg_kit_flutter/ffmpeg_kit.dart';
-import 'package:ffmpeg_kit_flutter/ffmpeg_session.dart';
+import 'package:ffmpeg_kit_https_flutter/ffmpeg_kit.dart';
+import 'package:ffmpeg_kit_https_flutter/ffmpeg_session.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:subtitle/subtitle.dart';
 import 'package:path/path.dart' as path;
