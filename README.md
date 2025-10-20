@@ -250,6 +250,13 @@ A primer on the basics of the application is as follows.
             <br />
             <sub><b>MarvNC</b></sub>
         </a>
+    </td>
+    <td align="center">
+        <a href="https://github.com/TheAtlasRises">
+            <img src="https://avatars.githubusercontent.com/u/106642434?v=4" width="100;" alt="TheAtlasRises"/>
+            <br />
+            <sub><b>TheAtlasRises</b></sub>
+        </a>
     </td></tr>
 </table>
 <!-- readme: contributors -end -->
