@@ -216,10 +216,10 @@ A primer on the basics of the application is as follows.
         </a>
     </td>
     <td align="center">
-        <a href="https://github.com/chrispavlopoulos">
-            <img src="https://avatars.githubusercontent.com/u/21095600?v=4" width="100;" alt="chrispavlopoulos"/>
+        <a href="https://github.com/chrispavs">
+            <img src="https://avatars.githubusercontent.com/u/21095600?v=4" width="100;" alt="chrispavs"/>
             <br />
-            <sub><b>chrispavlopoulos</b></sub>
+            <sub><b>chrispavs</b></sub>
         </a>
     </td>
     <td align="center">
