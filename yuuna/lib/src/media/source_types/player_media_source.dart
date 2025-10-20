@@ -1,10 +1,10 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:ffmpeg_kit_https_flutter/ffmpeg_kit.dart';
 import 'package:ffmpeg_kit_https_flutter/ffmpeg_session.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:ffmpeg_kit_https_flutter/ffmpeg_kit.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_vlc_player/flutter_vlc_player.dart';
 import 'package:fluttertoast/fluttertoast.dart';
@@ -255,7 +255,8 @@ abstract class PlayerMediaSource extends MediaSource {
 
     MediaSource source = item.getMediaSource(appModel: appModel);
     if (source is PlayerYoutubeSource) {
-      inputPath = await source.getAudioUrl(item, playerController.dataSource);
+      inputPath =
+          await source.getAudioExportUrl(item, playerController.dataSource);
       audioIndex = 0;
     }
 
@@ -263,6 +264,7 @@ abstract class PlayerMediaSource extends MediaSource {
         '-ss $timeStart -to $timeEnd -y -i "$inputPath" -map 0:a:$audioIndex "$outputPath"';
 
     await FFmpegKit.execute(command);
+    debugPrint(inputPath, wrapWidth: 10000);
 
     return audioFile;
   }
