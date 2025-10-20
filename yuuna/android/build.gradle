@@ -4,6 +4,11 @@ buildscript {
         google()
         mavenCentral()
         maven { url "https://jitpack.io" }
+        maven { url 'https://maven.aliyun.com/repository/public' }
+        maven { url 'https://maven.aliyun.com/repository/central' }
+        maven { url 'https://maven.aliyun.com/repository/google' }
+        maven { url 'https://maven.aliyun.com/repository/gradle-plugin' }
+        maven { url 'https://maven.aliyun.com/repository/apache-snapshots' }
     }
 
     dependencies {
@@ -17,6 +22,11 @@ allprojects {
         google()
         mavenCentral()
         maven { url "https://jitpack.io" }
+        maven { url 'https://maven.aliyun.com/repository/public' }
+        maven { url 'https://maven.aliyun.com/repository/central' }
+        maven { url 'https://maven.aliyun.com/repository/google' }
+        maven { url 'https://maven.aliyun.com/repository/gradle-plugin' }
+        maven { url 'https://maven.aliyun.com/repository/apache-snapshots' }
     }
 }
 
@@ -30,4 +40,8 @@ subprojects {
 
 tasks.register("clean", Delete) {
     delete rootProject.buildDir
+}
+
+ext {
+    flutterFFmpegPackage = "full-gpl-lts"
 }

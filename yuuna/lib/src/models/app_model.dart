@@ -346,7 +346,7 @@ class AppModel with ChangeNotifier {
   List<DictionarySearchResult> get dictionaryHistory =>
       _database.dictionarySearchResults
           .getAllSync(_dictionaryHistory.values.toList())
-          .whereNotNull()
+          .nonNulls
           .toList();
 
   /// For watching the dictionary history collection.
@@ -1040,7 +1040,8 @@ class AppModel with ChangeNotifier {
 
     List<BrowserBookmark> defaultBookmarks = [
       BrowserBookmark(
-          name: 'jidoujisho', url: 'https://github.com/arianneorpilla/jidoujisho'),
+          name: 'jidoujisho',
+          url: 'https://github.com/arianneorpilla/jidoujisho'),
       BrowserBookmark(name: 'Google', url: 'https://google.com/'),
       BrowserBookmark(name: 'DuckDuckGo', url: 'https://duckduckgo.com/'),
       BrowserBookmark(name: 'Wikipedia', url: 'https://wikipedia.org/'),
