@@ -3,7 +3,9 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_ffmpeg/flutter_ffmpeg.dart';
+import 'package:ffmpeg_kit_flutter_new_gpl/ffmpeg_kit.dart';
+import 'package:ffmpeg_kit_flutter_new_gpl/ffmpeg_session.dart';
+import 'package:ffmpeg_kit_flutter_new_gpl/return_code.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_vlc_player/flutter_vlc_player.dart';
 import 'package:fluttertoast/fluttertoast.dart';
@@ -170,10 +172,8 @@ abstract class PlayerMediaSource extends MediaSource {
       String command =
           '-ss $timestamp -y -i "$inputPath" -frames:v 1 -q:v 2 "$outputPath"';
 
-      final FlutterFFmpeg flutterFFmpeg = FlutterFFmpeg();
-      await flutterFFmpeg.execute(command);
-
-      String output = await FlutterFFmpegConfig().getLastCommandOutput();
+      FFmpegSession session = await FFmpegKit.execute(command);
+      String output = await session.getOutput() ?? '';
 
       if (!output.contains('Output file is empty, nothing was encoded')) {
         while (!imageFile.existsSync()) {
@@ -262,10 +262,18 @@ abstract class PlayerMediaSource extends MediaSource {
     }
 
     String command =
-        '-ss $timeStart -to $timeEnd -y -i "$inputPath" -map 0:a:$audioIndex "$outputPath"';
+        '-ss $timeStart -to $timeEnd -y -i "$inputPath" -map 0:a:$audioIndex -ac 2 "$outputPath"';
 
-    final FlutterFFmpeg flutterFFmpeg = FlutterFFmpeg();
-    await flutterFFmpeg.execute(command);
+    FFmpegSession session = await FFmpegKit.execute(command);
+    final ReturnCode? rc = await session.getReturnCode();
+
+    if (!ReturnCode.isSuccess(rc) || !audioFile.existsSync()) {
+      final String output = await session.getOutput() ?? '';
+      debugPrint(
+        '[generateAudio] FFmpeg failed (rc=${rc?.getValue()}, path=$outputPath): $output',
+      );
+      return null;
+    }
 
     return audioFile;
   }
