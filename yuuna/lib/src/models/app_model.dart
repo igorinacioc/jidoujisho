@@ -746,6 +746,7 @@ class AppModel with ChangeNotifier {
     final List<MediaType> availableMediaTypes = List<MediaType>.unmodifiable(
       [
         PlayerMediaType.instance,
+        JellyfinMediaType.instance,
         ReaderMediaType.instance,
         DictionaryMediaType.instance,
       ],
@@ -767,7 +768,8 @@ class AppModel with ChangeNotifier {
       PlayerMediaType.instance: [
         PlayerLocalMediaSource.instance,
         PlayerYoutubeSource.instance,
-        PlayerNetworkStreamSource.instance
+        PlayerNetworkStreamSource.instance,
+        PlayerJellyfinSource.instance,
       ],
       ReaderMediaType.instance: [
         ReaderTtuSource.instance,

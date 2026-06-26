@@ -8,6 +8,7 @@ import 'package:material_floating_search_bar/material_floating_search_bar.dart';
 import 'package:subtitle/subtitle.dart';
 import 'package:youtube_explode_dart/youtube_explode_dart.dart';
 import 'package:yuuna/language.dart';
+import 'package:yuuna/cast/cast.dart';
 import 'package:yuuna/media.dart';
 import 'package:yuuna/models.dart';
 import 'package:yuuna/pages.dart';
@@ -338,7 +339,7 @@ class PlayerYoutubeSource extends PlayerMediaSource {
   }
 
   @override
-  Future<VlcPlayerController> preparePlayerController({
+  Future<UniversalPlayerController> preparePlayerController({
     required AppModel appModel,
     required WidgetRef ref,
     required MediaItem item,
@@ -369,7 +370,7 @@ class PlayerYoutubeSource extends PlayerMediaSource {
       if (appModel.playerUseOpenSLES) '--aout=opensles',
     ];
 
-    return VlcPlayerController.network(
+    final vlc = VlcPlayerController.network(
       dataSource,
       hwAcc: appModel.playerHardwareAcceleration ? HwAcc.auto : HwAcc.disabled,
       allowBackgroundPlayback: appModel.playerBackgroundPlay,
@@ -380,6 +381,7 @@ class PlayerYoutubeSource extends PlayerMediaSource {
         video: VlcVideoOptions(videoParams),
       ),
     );
+    return UniversalPlayerController.vlc(vlc);
   }
 
   /// Gets the [StreamManifest] if in cache and fetches it

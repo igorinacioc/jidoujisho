@@ -1,0 +1,7 @@
+name: playback_core
+description: Playback core abstraction layer for pluggable video/audio backends.
+publish_to: 'none'
+version: 0.1.0
+
+environment:
+  sdk: ">=3.0.0 <4.0.0"

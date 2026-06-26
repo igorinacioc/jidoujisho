@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_logs/flutter_logs.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:media_kit/media_kit.dart';
 import 'package:network_to_file_image/network_to_file_image.dart';
 import 'package:receive_intent/receive_intent.dart' as intents;
 import 'package:stack_trace/stack_trace.dart';
@@ -29,6 +30,9 @@ void main() {
     /// Necessary to initialise Flutter when running native code before
     /// starting the application.
     final binding = WidgetsFlutterBinding.ensureInitialized();
+
+    /// Initialize media_kit (libmpv) for Jellyfin playback.
+    MediaKit.ensureInitialized();
 
     /// Initialise local file-based logging.
     await FlutterLogs.initLogs(

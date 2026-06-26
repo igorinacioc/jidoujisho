@@ -1,3 +1,6 @@
+export 'pages/mining/mining_mode_page.dart';
+export 'pages/mining/mining_controls.dart';
+export 'pages/mining/mining_subtitle_display.dart';
 export 'src/pages/implementations/blur_options_dialog_page.dart';
 export 'src/pages/implementations/crop_image_dialog_page.dart';
 export 'src/pages/implementations/creator_page.dart';
@@ -60,6 +63,10 @@ export 'src/pages/implementations/mokuro_catalog_browse_page.dart';
 export 'src/pages/implementations/mokuro_settings_dialog_page.dart';
 export 'src/pages/implementations/loading_page.dart';
 export 'src/pages/implementations/chatgpt_settings_dialog_page.dart';
+export 'src/pages/implementations/jellyfin_settings_dialog_page.dart';
+export 'src/pages/implementations/jellyfin_media_search_bar.dart';
+export 'src/pages/implementations/jellyfin_library_page.dart';
+export 'src/pages/implementations/track_selector_dialog.dart';
 export 'src/pages/implementations/switch_settings_page.dart';
 export 'src/pages/implementations/player_settings_dialog_page.dart';
 export 'src/pages/implementations/browser_history_page.dart';

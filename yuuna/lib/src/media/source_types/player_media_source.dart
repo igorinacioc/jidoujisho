@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_ffmpeg/flutter_ffmpeg.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_vlc_player/flutter_vlc_player.dart';
+import 'package:yuuna/cast/cast.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:intl/intl.dart';
 import 'package:material_floating_search_bar/material_floating_search_bar.dart';
@@ -52,8 +53,9 @@ abstract class PlayerMediaSource extends MediaSource {
     required MediaItem item,
   }) async {}
 
-  /// Get the player controller to be used when a media item is loaded up,
-  Future<VlcPlayerController> preparePlayerController({
+  /// Get the player controller to be used when a media item is loaded up.
+  /// Returns a [UniversalPlayerController] (wraps VLC or media_kit).
+  Future<UniversalPlayerController> preparePlayerController({
     required AppModel appModel,
     required WidgetRef ref,
     required MediaItem item,

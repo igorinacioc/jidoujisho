@@ -11,6 +11,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_vlc_player/flutter_vlc_player.dart';
+import 'package:media_kit_video/media_kit_video.dart' as mk;
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:multi_value_listenable_builder/multi_value_listenable_builder.dart';
@@ -20,6 +21,7 @@ import 'package:spaces/spaces.dart';
 import 'package:subtitle/subtitle.dart';
 import 'package:wakelock/wakelock.dart';
 import 'package:youtube_explode_dart/youtube_explode_dart.dart';
+import 'package:yuuna/cast/cast.dart';
 import 'package:yuuna/creator.dart';
 import 'package:yuuna/media.dart';
 import 'package:yuuna/pages.dart';
@@ -49,7 +51,7 @@ class PlayerSourcePage extends BaseSourcePage {
 
 class _PlayerSourcePageState extends BaseSourcePageState<PlayerSourcePage>
     with TickerProviderStateMixin, WidgetsBindingObserver {
-  late final VlcPlayerController _playerController;
+  late final UniversalPlayerController _playerController;
   late SubtitleItem _subtitleItem;
   late SubtitleItem _emptySubtitleItem;
   late List<SubtitleItem> _subtitleItems;
@@ -333,7 +335,7 @@ class _PlayerSourcePageState extends BaseSourcePageState<PlayerSourcePage>
       }
     }
 
-    _playerController = futures.elementAt(0) as VlcPlayerController;
+    _playerController = futures.elementAt(0) as UniversalPlayerController;
     _subtitleItems = futures.elementAt(1) as List<SubtitleItem>;
     _transcriptBackgroundNotifier.value = appModel.isTranscriptOpaque;
 
@@ -391,7 +393,8 @@ class _PlayerSourcePageState extends BaseSourcePageState<PlayerSourcePage>
     _blurOptionsNotifier = ValueNotifier<BlurOptions>(appModel.blurOptions);
 
     /// This is so cursed.
-    appModel.currentPlayerController = _playerController;
+    // ignore: deprecated_member_use_from_same_package
+    appModel.currentPlayerController = _playerController.vlcController;
     _currentSubtitle = appModel.currentSubtitle;
     _subtitleOptionsNotifier = appModel.currentSubtitleOptions!;
 
@@ -449,7 +452,9 @@ class _PlayerSourcePageState extends BaseSourcePageState<PlayerSourcePage>
         return;
       }
 
-      initialiseEmbeddedSubtitles(_playerController);
+      if (_playerController.vlcController != null) {
+        initialiseEmbeddedSubtitles(_playerController.vlcController!);
+      }
 
       Future.delayed(const Duration(seconds: 5), () {
         appModel.blockCreatorInitialMedia = false;
@@ -547,22 +552,22 @@ class _PlayerSourcePageState extends BaseSourcePageState<PlayerSourcePage>
       return;
     }
 
-    if (_playerController.value.isInitialized) {
+    if (_playerController.isInitialized) {
       if (_durationNotifier.value == Duration.zero) {
         appModel.audioHandler?.mediaItem.add(
           appModel.audioHandler?.mediaItem.value?.copyWith.call(
-            duration: _playerController.value.duration,
+            duration: _playerController.duration,
           ),
         );
       }
 
-      _positionNotifier.value = _playerController.value.position;
-      _durationNotifier.value = _playerController.value.duration;
-      _playingNotifier.value = _playerController.value.isPlaying;
-      _endedNotifier.value = _playerController.value.isEnded;
+      _positionNotifier.value = _playerController.position;
+      _durationNotifier.value = _playerController.duration;
+      _playingNotifier.value = _playerController.isPlaying;
+      _endedNotifier.value = _playerController.isEnded;
 
-      if (_playerController.value.aspectRatio != _lastAspectRatio) {
-        _lastAspectRatio = _playerController.value.aspectRatio;
+      if (_playerController.aspectRatio != _lastAspectRatio) {
+        _lastAspectRatio = _playerController.aspectRatio;
         setState(() {});
       }
 
@@ -888,17 +893,21 @@ class _PlayerSourcePageState extends BaseSourcePageState<PlayerSourcePage>
       child: Center(
         child: Transform.scale(
           scale: appModel.isStretchToFill
-              ? max(_playerController.value.aspectRatio,
+              ? max(_playerController.aspectRatio,
                       MediaQuery.of(context).size.aspectRatio) /
-                  min(_playerController.value.aspectRatio,
+                  min(_playerController.aspectRatio,
                       MediaQuery.of(context).size.aspectRatio)
               : 1,
-          child: VlcPlayer(
-            controller: _playerController,
-            aspectRatio: _playerController.value.aspectRatio,
-            placeholder: buildLoading(),
-            virtualDisplay: false,
-          ),
+          child: _playerController.vlcController != null
+              ? VlcPlayer(
+                  controller: _playerController.vlcController!,
+                  aspectRatio: _playerController.aspectRatio,
+                  placeholder: buildLoading(),
+                  virtualDisplay: false,
+                )
+              : _playerController.mkVideo != null
+                  ? mk.Video(controller: _playerController.mkVideo!)
+                  : buildLoading(),
         ),
       ),
     );
@@ -1011,7 +1020,7 @@ class _PlayerSourcePageState extends BaseSourcePageState<PlayerSourcePage>
               currentSubtitle: _currentSubtitle,
               autoPauseNotifier: _autoPauseNotifier,
               subtitleOptions: _subtitleOptionsNotifier.value,
-              controller: _playerController,
+              controller: _playerController.vlcController!,
               nearestSubtitle: getNearestSubtitle(),
               playingNotifier: _playingNotifier,
               endedNotifier: _endedNotifier,
@@ -1212,7 +1221,9 @@ class _PlayerSourcePageState extends BaseSourcePageState<PlayerSourcePage>
                 buildDurationAndPosition(),
                 buildSlider(),
                 buildSourceButton(),
-                buildAudioSubtitlesButton(),
+                buildAudioButton(),
+                buildSubtitleButton(),
+                buildCastButton(),
                 buildOptionsButton(),
                 const Space.small(),
               ],
@@ -1259,14 +1270,14 @@ class _PlayerSourcePageState extends BaseSourcePageState<PlayerSourcePage>
 
   /// This gets the icon for the central play/pause button.
   Widget getCentralIcon() {
-    if (_playerController.value.isEnded) {
+    if (_playerController.isEnded) {
       return const Icon(Icons.replay, size: 32);
     } else {
-      if (!_playerController.value.isInitialized) {
+      if (!_playerController.isInitialized) {
         return const Icon(Icons.play_arrow, color: Colors.transparent);
       }
 
-      if (!_playerController.value.isPlaying) {
+      if (!_playerController.isPlaying) {
         return const Icon(Icons.play_arrow);
       }
 
@@ -1420,7 +1431,7 @@ class _PlayerSourcePageState extends BaseSourcePageState<PlayerSourcePage>
             value: sliderValue,
             max: (!validPosition || isEnded)
                 ? 1.0
-                : _playerController.value.duration.inSeconds.toDouble(),
+                : _playerController.duration.inSeconds.toDouble(),
             onChangeStart: (value) {
               _dialogSmartPaused = false;
               _dialogSmartFocusFlag = false;
@@ -1632,6 +1643,96 @@ class _PlayerSourcePageState extends BaseSourcePageState<PlayerSourcePage>
     return options;
   }
 
+  /// Moonfin-style audio track selector using [TrackSelectorDialog].
+  Widget buildAudioButton() {
+    return Material(
+      color: Colors.transparent,
+      child: JidoujishoIconButton(
+        size: 24,
+        icon: Icons.music_note_outlined,
+        tooltip: t.player_option_select_audio,
+        onTap: () async {
+          final embeddedTracks = await _playerController.getAudioTracks();
+          final currentTrack = await _playerController.getAudioTrack() ?? 0;
+          if (!context.mounted) {
+            return;
+          }
+          final options = embeddedTracks.entries.map((e) =>
+            TrackOption(label: e.value, subtitle: 'Track ${e.key}'),
+          ).toList();
+          final idx = await TrackSelectorDialog.show(
+            context,
+            title: t.player_option_select_audio,
+            options: options,
+            selectedIndex: currentTrack,
+          );
+          if (idx != null && idx != currentTrack) {
+            await _playerController.setAudioTrack(idx);
+          }
+        },
+      ),
+    );
+  }
+
+  /// Moonfin-style subtitle track selector using [TrackSelectorDialog].
+  Widget buildSubtitleButton() {
+    return Material(
+      color: Colors.transparent,
+      child: JidoujishoIconButton(
+        size: 24,
+        icon: Icons.subtitles_outlined,
+        tooltip: t.player_option_select_subtitle,
+        onTap: () async {
+          final embeddedTracks = await _playerController.getSpuTracks();
+          if (!context.mounted) {
+            return;
+          }
+          final currentIdx = _subtitleItems.indexOf(_subtitleItem);
+          final options = <TrackOption>[];
+          for (final SubtitleItem item in _subtitleItems) {
+            options.add(TrackOption(
+              label: getSubtitleLabel(item: item, embeddedTracks: embeddedTracks),
+            ));
+          }
+          final idx = await TrackSelectorDialog.show(
+            context,
+            title: t.player_option_select_subtitle,
+            options: options,
+            selectedIndex: currentIdx >= 0 ? currentIdx : null,
+          );
+          if (idx != null && idx != currentIdx) {
+            _subtitleItem = _subtitleItems[idx];
+            if (!_subtitleItem.controller.initialized) {
+              _subtitleItem.controller.initial();
+            }
+            _currentSubtitle.value = null;
+            widget.source.clearCurrentSentence();
+            refreshSubtitleWidget();
+          }
+        },
+      ),
+    );
+  }
+
+  /// Cast-to-TV button — uses Jellyfin/DLNA infrastructure.
+  Widget buildCastButton() {
+    final source = widget.item?.getMediaSource(appModel: appModel);
+    if (source is! PlayerJellyfinSource || !source.isLoggedIn) {
+      return const SizedBox.shrink();
+    }
+    return Material(
+      color: Colors.transparent,
+      child: JidoujishoIconButton(
+        size: 24,
+        icon: Icons.cast,
+        tooltip: 'Cast to TV',
+        onTap: () async {
+          await source.launchMiningMode(context, ref, appModel, widget.item!);
+        },
+      ),
+    );
+  }
+
   /// This is the second bottomrightmost button in the menu.
   Widget buildAudioSubtitlesButton() {
     JidoujishoBottomSheetOption audioOption = JidoujishoBottomSheetOption(
@@ -1714,7 +1815,7 @@ class _PlayerSourcePageState extends BaseSourcePageState<PlayerSourcePage>
                 title: widget.item!.title,
                 subtitles: _subtitleItem.controller.subtitles,
                 subtitleController: _subtitleItem.controller,
-                controller: _playerController,
+                controller: _playerController.vlcController!,
                 autoPauseNotifier: _autoPauseNotifier,
                 playingNotifier: _playingNotifier,
                 endedNotifier: _endedNotifier,
@@ -2519,9 +2620,9 @@ class _PlayerSourcePageState extends BaseSourcePageState<PlayerSourcePage>
 
     _dialogSmartPaused = false;
 
-    final isFinished = _playerController.value.isEnded;
+    final isFinished = _playerController.isEnded;
 
-    if (_playerController.value.isPlaying) {
+    if (_playerController.isPlaying) {
       _playPauseAnimationController.reverse();
       _menuHideTimer?.cancel();
       _isMenuHidden.value = false;
@@ -2529,7 +2630,7 @@ class _PlayerSourcePageState extends BaseSourcePageState<PlayerSourcePage>
       await _playerController.pause();
       _session.setActive(false);
     } else {
-      if (!_playerController.value.isInitialized) {
+      if (!_playerController.isInitialized) {
         _playerController.initialize().then((_) async {
           await _playerController.play();
           _session.setActive(true);
@@ -2609,7 +2710,7 @@ class _PlayerSourcePageState extends BaseSourcePageState<PlayerSourcePage>
   /// This is called when opening dialogs such as the transcript and the
   /// creator, where it is appropriate to pause the player.
   Future<void> dialogSmartPause() async {
-    if (_playerController.value.isPlaying) {
+    if (_playerController.isPlaying) {
       _menuHideTimer?.cancel();
       _dialogSmartPaused = true;
       await _playerController.pause();

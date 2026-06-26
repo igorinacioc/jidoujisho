@@ -7,6 +7,7 @@ import 'package:flutter_ffmpeg/flutter_ffmpeg.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_vlc_player/flutter_vlc_player.dart';
 import 'package:material_floating_search_bar/material_floating_search_bar.dart';
+import 'package:yuuna/cast/cast.dart';
 import 'package:yuuna/media.dart';
 import 'package:yuuna/models.dart';
 import 'package:yuuna/pages.dart';
@@ -289,7 +290,7 @@ class PlayerLocalMediaSource extends PlayerMediaSource {
   ];
 
   @override
-  Future<VlcPlayerController> preparePlayerController({
+  Future<UniversalPlayerController> preparePlayerController({
     required AppModel appModel,
     required WidgetRef ref,
     required MediaItem item,
@@ -317,7 +318,7 @@ class PlayerLocalMediaSource extends PlayerMediaSource {
       if (appModel.playerUseOpenSLES) '--aout=opensles'
     ];
 
-    return VlcPlayerController.file(
+    final vlc = VlcPlayerController.file(
       File(item.mediaIdentifier),
       hwAcc: appModel.playerHardwareAcceleration ? HwAcc.auto : HwAcc.disabled,
       allowBackgroundPlayback: appModel.playerBackgroundPlay,
@@ -328,6 +329,7 @@ class PlayerLocalMediaSource extends PlayerMediaSource {
         video: VlcVideoOptions(videoParams),
       ),
     );
+    return UniversalPlayerController.vlc(vlc);
   }
 
   @override
