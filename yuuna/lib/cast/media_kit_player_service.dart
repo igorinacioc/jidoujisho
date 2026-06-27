@@ -40,9 +40,13 @@ class MediaKitPlayerService {
       Media(streamUrl),
       play: true,
     );
-    // Seek to start position if needed.
+    // Seek to start position if needed (only if not at the very end).
     if (startTime > 0) {
-      await player.seek(Duration(seconds: startTime));
+      // Avoid seeking to near-end in case Jellyfin reports fully watched items.
+      final dur = player.state.duration.inSeconds;
+      if (dur == 0 || startTime < dur - 10) {
+        await player.seek(Duration(seconds: startTime));
+      }
     }
 
     return (player: player, videoController: videoController);

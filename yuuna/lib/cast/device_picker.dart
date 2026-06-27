@@ -100,12 +100,15 @@ class _DeviceTile extends StatelessWidget {
       leading: _icon(device.icon),
       title: Text(device.name),
       subtitle: Text(device.type),
-      trailing: device.isDlna
-          ? const Chip(label: Text('DLNA', style: TextStyle(fontSize: 10)))
-          : device.isJellyfin
-              ? const Chip(
-                  label: Text('Jellyfin', style: TextStyle(fontSize: 10)))
-              : null,
+      trailing: device.isChromecast
+          ? const Chip(
+              label: Text('Chromecast', style: TextStyle(fontSize: 10)))
+          : device.isDlna
+              ? const Chip(label: Text('DLNA', style: TextStyle(fontSize: 10)))
+              : device.isJellyfin
+                  ? const Chip(
+                      label: Text('Jellyfin', style: TextStyle(fontSize: 10)))
+                  : null,
       onTap: onTap,
     );
   }

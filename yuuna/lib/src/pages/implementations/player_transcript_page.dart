@@ -4,7 +4,6 @@ import 'dart:math';
 import 'package:change_notifier_builder/change_notifier_builder.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_vlc_player/flutter_vlc_player.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:material_floating_search_bar/material_floating_search_bar.dart';
@@ -12,6 +11,7 @@ import 'package:multi_value_listenable_builder/multi_value_listenable_builder.da
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 import 'package:spaces/spaces.dart';
 import 'package:subtitle/subtitle.dart';
+import 'package:yuuna/cast/player_controller_adapter.dart';
 import 'package:yuuna/creator.dart';
 import 'package:yuuna/media.dart';
 import 'package:yuuna/pages.dart';
@@ -62,7 +62,7 @@ class PlayerTranscriptPage extends BaseSourcePage {
   final SubtitleOptions subtitleOptions;
 
   /// Controller for the player.
-  final VlcPlayerController controller;
+  final UniversalPlayerController controller;
 
   /// Notifier for whether or not the player is playing.
   final ValueNotifier<bool> playingNotifier;
@@ -105,8 +105,8 @@ class _PlayerTranscriptPageState
       if ((widget.subtitles.last.end -
                   Duration(
                       milliseconds: widget.subtitleOptions.subtitleDelay)) <=
-              widget.controller.value.position ||
-          widget.controller.value.isEnded) {
+              widget.controller.position ||
+          widget.controller.isEnded) {
         selectedIndex = widget.subtitles.last.index;
       }
       _selectedIndexNotifier.value ??= selectedIndex - 1;
@@ -1002,7 +1002,7 @@ class _PlayerTranscriptPageState
   /// This is called when opening dialogs such as the transcript and the
   /// creator, where it is appropriate to pause the player.
   Future<void> dialogSmartPause() async {
-    if (widget.controller.value.isPlaying) {
+    if (widget.controller.isPlaying) {
       _dialogSmartPaused = true;
       await widget.controller.pause();
     }

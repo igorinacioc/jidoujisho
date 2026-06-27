@@ -1,8 +1,10 @@
 import 'package:flutter/foundation.dart';
 import 'package:server_core/server_core.dart';
+import 'package:yuuna/cast/chromecast_discovery.dart';
 
-/// Represents a potential cast target, unifying SSDP-discovered devices
-/// and Jellyfin-registered devices into a single model for the picker UI.
+/// Represents a potential cast target, unifying mDNS-discovered Chromecasts,
+/// SSDP-discovered devices, and Jellyfin-registered devices into a single
+/// model for the picker UI.
 class CastTarget {
   /// Human-readable name to display in the device picker.
   final String name;
@@ -19,12 +21,16 @@ class CastTarget {
   /// The SSDP-discovered device, if available (for DLNA/UPnP direct casting).
   final DiscoveredDevice? ssdpDevice;
 
+  /// The mDNS-discovered Chromecast device, if available (for Google Cast direct).
+  final ChromecastDevice? chromecastDevice;
+
   const CastTarget({
     required this.name,
     required this.type,
     required this.icon,
     this.jellyfinDevice,
     this.ssdpDevice,
+    this.chromecastDevice,
   });
 
   /// Whether this device supports DLNA direct casting (has SSDP + location URL).
@@ -32,6 +38,12 @@ class CastTarget {
 
   /// Whether this device supports Jellyfin session casting.
   bool get isJellyfin => jellyfinDevice != null;
+
+  /// Whether this device supports Google Cast direct casting.
+  ///
+  /// True when either a dedicated [chromecastDevice] is set (preferred) or
+  /// the [ssdpDevice] was discovered via mDNS with `isChromecast: true`.
+  bool get isChromecast => chromecastDevice != null || (ssdpDevice?.isChromecast ?? false);
 }
 
 /// Icon categories for cast devices in the picker UI.
@@ -42,7 +54,7 @@ enum CastDeviceIcon {
   speaker,
 }
 
-/// A device discovered on the local network via SSDP/UPnP.
+/// A device discovered on the local network via SSDP/UPnP or mDNS.
 class DiscoveredDevice {
   final String name;
   final String type;
@@ -51,6 +63,12 @@ class DiscoveredDevice {
   final String? locationUrl;
   final String? serverInfo;
 
+  /// TCP port for CastV2 connection (8009 for Chromecast).
+  final int? port;
+
+  /// Whether this device was discovered via mDNS as a Google Cast device.
+  final bool isChromecast;
+
   const DiscoveredDevice({
     required this.name,
     required this.type,
@@ -58,6 +76,8 @@ class DiscoveredDevice {
     required this.ip,
     this.locationUrl,
     this.serverInfo,
+    this.port,
+    this.isChromecast = false,
   });
 }
 

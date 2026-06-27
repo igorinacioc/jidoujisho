@@ -9,7 +9,7 @@ import '../media_type.dart';
 class JellyfinMediaType extends MediaType {
   JellyfinMediaType._privateConstructor()
       : super(
-          uniqueKey: 'jellyfin',
+          uniqueKey: 'jellyfin_media_type',
           icon: Icons.live_tv,
           outlinedIcon: Icons.live_tv_outlined,
         );

@@ -769,7 +769,6 @@ class AppModel with ChangeNotifier {
         PlayerLocalMediaSource.instance,
         PlayerYoutubeSource.instance,
         PlayerNetworkStreamSource.instance,
-        PlayerJellyfinSource.instance,
       ],
       ReaderMediaType.instance: [
         ReaderTtuSource.instance,
@@ -784,6 +783,7 @@ class AppModel with ChangeNotifier {
         ViewerCameraSource.instance,
       ],
       DictionaryMediaType.instance: [],
+      JellyfinMediaType.instance: [],
     };
 
     mediaSources = Map<MediaType, Map<String, MediaSource>>.unmodifiable(
@@ -1212,7 +1212,9 @@ class AppModel with ChangeNotifier {
 
     /// Ready all media sources for use.
     for (MediaType type in mediaTypes.values) {
-      for (MediaSource source in mediaSources[type]!.values) {
+      final sources = mediaSources[type];
+      if (sources == null) continue;
+      for (MediaSource source in sources.values) {
         await source.initialise();
       }
     }

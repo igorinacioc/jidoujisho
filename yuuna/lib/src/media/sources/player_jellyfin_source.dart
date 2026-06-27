@@ -123,10 +123,11 @@ class PlayerJellyfinSource extends PlayerMediaSource {
     if (_browseCache.containsKey(cacheKey)) return _browseCache[cacheKey]!;
 
     List<server_core.MediaItem> items;
-    if (parentType == 'Series' && seriesId != null) {
+    final pt = parentType?.toLowerCase();
+    if ((pt == 'series') && seriesId != null) {
       // Get seasons for a TV series.
       items = await _c.itemsApi.getSeasons(seriesId);
-    } else if (parentType == 'Season' && seriesId != null) {
+    } else if ((pt == 'season') && seriesId != null) {
       // Get episodes for a TV season.
       items = await _c.itemsApi.getEpisodes(seriesId, parentId);
     } else {
@@ -210,10 +211,14 @@ class PlayerJellyfinSource extends PlayerMediaSource {
 
     // Use media_kit for Jellyfin streaming.
     final service = MediaKitPlayerService(_c.playbackApi);
+    // Cap start time to avoid seeking to the very end (e.g. if Jellyfin
+    // reports the item as fully watched via PlaybackPositionTicks = RunTimeTicks).
+    final duration = item.duration > 0 ? item.duration : 0;
+    final startTime = item.position < duration - 10 ? item.position : 0;
     final (:player, :videoController) = await service.createPlayer(
       itemId: item.mediaIdentifier,
       mediaSourceId: msId,
-      startTime: item.position,
+      startTime: startTime,
     );
     return UniversalPlayerController.mediaKit(
       player: player,
@@ -381,6 +386,44 @@ class PlayerJellyfinSource extends PlayerMediaSource {
           mediaSourceId: msId,
         ));
       } catch (_) {}
+
+      // Chromecast (Google Cast via mDNS / CastV2 protocol).
+      // Must be checked BEFORE DLNA — Chromecasts may also respond to
+      // DIAL SSDP, which would incorrectly route them to the DLNA path.
+      if (target.isChromecast) {
+        // Build a ChromecastDevice from whichever source is available.
+        final chromecastDevice = target.chromecastDevice ??
+            ChromecastDevice(
+              name: target.ssdpDevice?.name ?? target.name,
+              host: target.ssdpDevice?.ip ?? '',
+              port: target.ssdpDevice?.port ?? 8009,
+              id: target.ssdpDevice?.ip ?? '',
+            );
+
+        final streamUrl = _c.playbackApi.getStreamUrl(item.mediaIdentifier, msId);
+        final ctrl = await ChromecastController.connect(
+          device: chromecastDevice,
+          streamUrl: streamUrl,
+          contentType: 'video/mp4',
+          title: item.title ?? target.name,
+        );
+        if (ctrl == null) {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Chromecast connection failed.')));
+          }
+          return;
+        }
+        if (!context.mounted) return;
+        await Navigator.of(context).push(MaterialPageRoute(
+          builder: (ctx) => MiningModePage(
+            castSession: ctrl, subtitles: subs,
+            onExitMining: () async { await ctrl.stop(); Navigator.pop(ctx); },
+            appModel: appModel,
+          ),
+        ));
+        return;
+      }
 
       // DLNA.
       if (target.isDlna && target.ssdpDevice?.locationUrl != null) {

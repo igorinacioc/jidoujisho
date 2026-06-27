@@ -1,9 +1,9 @@
 /// Generated file. Do not edit.
 ///
 /// Locales: 2
-/// Strings: 794 (397 per locale)
+/// Strings: 796 (398 per locale)
 ///
-/// Built on 2026-06-19 at 00:34 UTC
+/// Built on 2026-06-26 at 22:52 UTC
 
 // coverage:ignore-file
 // ignore_for_file: type=lint
@@ -151,6 +151,7 @@ class _StringsEn implements BaseTranslations<AppLocale, _StringsEn> {
 	String get player_media_type => 'Player';
 	String get reader_media_type => 'Reader';
 	String get viewer_media_type => 'Viewer';
+	String get jellyfin_media_type => 'Jellyfin';
 	String get back => 'Back';
 	String get search => 'Search';
 	String get search_ellipsis => 'Search...';
@@ -599,6 +600,7 @@ class _StringsPtBr implements _StringsEn {
 	@override String get player_media_type => 'Player';
 	@override String get reader_media_type => 'Leitor';
 	@override String get viewer_media_type => 'Visualizador';
+	@override String get jellyfin_media_type => 'Jellyfin';
 	@override String get back => 'Voltar';
 	@override String get search => 'Buscar';
 	@override String get search_ellipsis => 'Buscar...';
@@ -1028,6 +1030,7 @@ extension on _StringsEn {
 			case 'player_media_type': return 'Player';
 			case 'reader_media_type': return 'Reader';
 			case 'viewer_media_type': return 'Viewer';
+			case 'jellyfin_media_type': return 'Jellyfin';
 			case 'back': return 'Back';
 			case 'search': return 'Search';
 			case 'search_ellipsis': return 'Search...';
@@ -1437,6 +1440,7 @@ extension on _StringsPtBr {
 			case 'player_media_type': return 'Player';
 			case 'reader_media_type': return 'Leitor';
 			case 'viewer_media_type': return 'Visualizador';
+			case 'jellyfin_media_type': return 'Jellyfin';
 			case 'back': return 'Voltar';
 			case 'search': return 'Buscar';
 			case 'search_ellipsis': return 'Buscar...';

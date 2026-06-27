@@ -3,6 +3,7 @@
     "player_media_type": "Player",
     "reader_media_type": "Leitor",
     "viewer_media_type": "Visualizador",
+    "jellyfin_media_type": "Jellyfin",
     "back": "Voltar",
     "search": "Buscar",
     "search_ellipsis": "Buscar...",

@@ -165,6 +165,15 @@ class _JidoujishoAppState extends ConsumerState<JidoujishoApp>
 
     debugPrint(jsonEncode(intent.toMap()));
 
+    // If the initial intent has no action (e.g. launched via adb am start),
+    // treat it as MAIN so the HomePage renders instead of a white Scaffold.
+    if (isInitial && intent.action == null) {
+      setState(() {
+        _isMainIntent = true;
+      });
+      return;
+    }
+
     switch (intent.action) {
       case 'android.intent.action.MAIN':
         setState(() {

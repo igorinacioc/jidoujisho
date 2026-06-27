@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "adb-mcp": {
+      "command": "python",
+      "args": ["tools/adb-mcp/server.py"]
+    }
+  }
+}

@@ -358,3 +358,274 @@ Retornam 502 e o Gradle NÃO faz fallback para google()/mavenCentral().
 | i18n só em inglês | Exclui usuários não-anglófonos | Adicionar traduções (JP, PT-BR, etc.) |
 | ~12 forks Git pessoais | Risco se repositórios ficarem offline | Documentar forks; considerar upstream ou mirror |
 | ✅ Build limpo resolvido | — | ffmpeg: min-gpl; mecab_dart: fork local; async_zip: patch | |
+
+---
+
+## 🧪 Infraestrutura de Teste com Emulador (2026-06-26)
+
+### ⚠️ Paths do Android SDK — NUNCA usar `cmd.exe /c`
+
+**`cmd.exe /c` NÃO funciona** — o processo morre silenciosamente ou não produz output.
+Use **sempre paths diretos do bash** com barras `/`.
+
+| Variável | Valor expandido |
+|----------|-----------------|
+| `%LOCALAPPDATA%` | `C:\Users\Family\AppData\Local` |
+| `%APPDATA%` | `C:\Users\Family\AppData\Roaming` |
+| adb | `C:/Users/Family/AppData/Local/Android/Sdk/platform-tools/adb.exe` |
+| emulator | `C:/Users/Family/AppData/Local/Android/Sdk/emulator/emulator` |
+
+### Emulador Android leve (`yuuna_test`)
+Emulador API 30 x86_64 sem Google APIs, 2GB RAM, 1 core, GPU SwiftShader.
+
+```bash
+# Iniciar (com janela visivel) — bash direto com & no final:
+"C:/Users/Family/AppData/Local/Android/Sdk/emulator/emulator" \
+  -avd yuuna_test \
+  -gpu auto \
+  -no-boot-anim \
+  -netdelay none \
+  -netspeed full &
+
+# Aguardar boot (~20s) e verificar:
+sleep 20
+C:/Users/Family/AppData/Local/Android/Sdk/platform-tools/adb.exe devices
+# Deve mostrar: emulator-5554  device
+```
+
+### Instalar e iniciar o app
+```bash
+# Build (sempre usar FVM):
+export PATH="/c/Users/Family/fvm/versions/3.13.5/bin:$PATH"
+flutter build apk --debug
+
+# Instalar (bash direto):
+C:/Users/Family/AppData/Local/Android/Sdk/platform-tools/adb.exe install -r build/app/outputs/flutter-apk/app-debug.apk
+
+# Iniciar (ATENCAO: sem LAUNCHER no manifest, usar explicit intent):
+C:/Users/Family/AppData/Local/Android/Sdk/platform-tools/adb.exe shell am start -n app.arianneorpilla.yuuna/.MainActivity
+```
+
+### agent-device (testes automatizados)
+```bash
+# Instalado em: C:/Users/Family/AppData/Roaming/npm/agent-device.cmd
+# ⚠️ agent-device é Node.js, NÃO funciona no Git Bash (npm/node fora do PATH).
+# Usar PowerShell:
+powershell -Command "& 'C:\Users\Family\AppData\Roaming\npm\agent-device.cmd' snapshot -i"
+
+# Ou cmd.exe (única exceção que funciona com cmd.exe /c):
+cmd.exe /c "C:\Users\Family\AppData\Roaming\npm\agent-device.cmd snapshot -i"
+
+# Comandos uteis:
+#   snapshot -i     → arvore de acessibilidade (elementos interativos)
+#   screenshot <p>  → captura de tela
+#   tap @e5         → tocar elemento
+#   fill @e3 "txt"  → preencher campo
+#   open app.arianneorpilla.yuuna --platform android
+```
+
+### Teste do Jellyfin (servidor real)
+```bash
+cd packages/server_jellyfin
+# Configurar antes de rodar:
+export JELLYFIN_URL="http://192.168.0.73:8096"
+export JELLYFIN_USERNAME="igor"
+export JELLYFIN_PASSWORD="2803"
+dart run test/jellyfin_live_test.dart
+```
+
+### Problemas conhecidos
+- **Emulador sem janela**: NUNCA usar `-no-window` — usuario precisa ver a tela
+- **Package name**: `app.arianneorpilla.yuuna` (nao `app.lrorpilla.jidoujisho`)
+- **Sem LAUNCHER**: AndroidManifest nao tem `category.LAUNCHER` — necessario iniciar com `am start -n`
+- **APK 388MB**: inclui todas as ABIs (media_kit). Debug somente.
+- **media_kit precisa SDK 36**: warning no build, mas funciona
+- **npm/node nao no PATH do Git Bash**: usar `cmd.exe /c` ou PowerShell
+- **Adicionar novo MediaType causa crash no startup**: Ver [#Bugfix: Novo MediaType sem entry em mediaSources](#bugfix-novo-mediatype-sem-entry-em-mediasources)
+- **Emulador pode precisar de `-gpu swiftshader_indirect` se der crash grafico**
+
+### Bugfix: Novo MediaType sem entry em mediaSources (2026-06-26)
+
+**Sintoma:** App crasha no startup com `Null check operator used on a null value` em
+`AppModel.initialise` linha `mediaSources[type]!.values`.
+
+**Causa:** `populateMediaSources()` (app_model.dart:765) tem um mapa `availableMediaSources`
+com entradas para cada `MediaType`. Quando um novo `MediaType` é adicionado em
+`populateMediaTypes()` (ex: `JellyfinMediaType`) mas NÃO em `populateMediaSources()`,
+o loop de inicialização quebra porque `mediaSources[type]` retorna `null`.
+
+**Solução:**
+1. Adicionar entrada no `availableMediaSources` em `populateMediaSources()`:
+   ```dart
+   JellyfinMediaType.instance: [],
+   ```
+2. Tornar o loop de inicialização null-safe (app_model.dart:~1215):
+   ```dart
+   for (MediaType type in mediaTypes.values) {
+     final sources = mediaSources[type];
+     if (sources == null) continue;  // ← seguro para tipos sem sources
+     for (MediaSource source in sources.values) {
+       await source.initialise();
+     }
+   }
+   ```
+
+### Estado atual Jellyfin (branch `ffmpeg-kit-migration`)
+- ✅ Aba Jellyfin dedicada (`JellyfinMediaType`) na barra inferior
+- ✅ Jellyfin removido do seletor de sources da aba Player (só na própria)
+- ✅ Player migrado para media_kit via `UniversalPlayerController`
+- ✅ Track selector Moonfin-style (`TrackSelectorDialog`)
+- ✅ Botao Cast TV no player (mDNS + CastV2 protocol + CORS proxy)
+- ✅ Legendas WebVTT (fix Jellyfin 10.11)
+- ✅ Posters com CachedNetworkImage + fallback azul com nome
+- ✅ Navegacao de series (getSeasons/getEpisodes)
+- ✅ App inicia sem crash
+- ✅ Login Jellyfin funcional (port forwarding para emulador)
+- ✅ Emulador yuuna_test funcionando com `-gpu swiftshader_indirect`
+- ⚠️ Player bugs (icone central, barra progresso, legendas) em investigacao
+- ⚠️ Series: temporadas sem videos (possivel cache/API type mismatch)
+
+### ⚠️ Emulador NAT vs Jellyfin — Port Forwarding (2026-06-26)
+
+**Problema:** O emulador Android usa NAT (`10.0.2.0/24`) e NÃO consegue alcançar
+dispositivos na rede LAN como o servidor Jellyfin (`192.168.0.73:8096`). O gateway
+`10.0.2.2` (host) não faz forwarding para a rede `192.168.0.0/24`.
+
+**Solução: Cadeia de port forwarding com 2 pontas:**
+
+```
+Emulador ──▶ 127.0.0.1:8096 ──▶ Host (PC) ──▶ 192.168.0.73:8096
+              ↑                      ↑
+         adb reverse           netsh portproxy
+```
+
+#### Passo 1: Windows portproxy (REQUER ADMIN — executar no PowerShell como Admin)
+
+```powershell
+# Criar o túnel (só precisa rodar UMA vez, sobrevive a reboots):
+netsh interface portproxy add v4tov4 `
+    listenport=8096 `
+    listenaddress=127.0.0.1 `
+    connectport=8096 `
+    connectaddress=192.168.0.73
+
+# Verificar que existe:
+netsh interface portproxy show all
+
+# Remover quando não precisar mais:
+netsh interface portproxy delete v4tov4 listenport=8096 listenaddress=127.0.0.1
+```
+
+⚠️ **Zero impacto na rede normal:** escuta exclusivamente em `127.0.0.1` (loopback).
+Nenhum tráfego externo é afetado. Regra é de 1 porta, 1 IP origem, 1 IP destino.
+
+#### Passo 2: adb reverse (NÃO precisa de admin)
+
+```bash
+# Criar túnel do emulador para o host:
+C:/Users/Family/AppData/Local/Android/Sdk/platform-tools/adb.exe reverse tcp:8096 tcp:8096
+
+# Verificar túneis ativos:
+C:/Users/Family/AppData/Local/Android/Sdk/platform-tools/adb.exe reverse --list
+
+# ⚠️ Este comando reverte TODOS os reverses (limpeza ao fim da sessão):
+C:/Users/Family/AppData/Local/Android/Sdk/platform-tools/adb.exe reverse --remove-all
+```
+
+**IMPORTANTE: `adb reverse` NÃO sobrevive a reboot do emulador.** Precisa re-executar
+após cada reinício do emulador ou do host.
+
+**Sessão atual (2026-06-26):** `adb reverse tcp:8096` já configurado. Ao encerrar,
+executar `adb reverse --remove-all` para limpar.
+
+#### Passo 3: Usar `127.0.0.1` no app
+
+No diálogo Jellyfin Settings do app, usar:
+```
+Server URL: http://127.0.0.1:8096
+Username:   igor
+Password:   2803
+```
+
+**NÃO usar `192.168.0.73`** — o emulador não alcança esse IP diretamente.
+
+#### Checklist de teste Jellyfin via emulador
+
+```
+[ ] Passo 1: netsh portproxy add (PowerShell Admin, uma vez)
+[ ] Passo 2: adb reverse tcp:8096 tcp:8096 (após cada reboot do emulador)
+[ ] Passo 3: App → aba Jellyfin → Jellyfin Settings → URL: 127.0.0.1:8096
+[ ] Connect deve funcionar → mostrar bibliotecas Jellyfin
+[ ] Navegar bibliotecas, dar play em filme/episódio
+[ ] Testar track selector, legendas WebVTT
+[ ] Ao encerrar sessão: adb reverse --remove-all
+```
+
+#### Teste direto (sem UI) — Jellyfin package
+
+```bash
+cd packages/server_jellyfin
+export JELLYFIN_URL="http://192.168.0.73:8096"
+export JELLYFIN_USERNAME="igor"
+export JELLYFIN_PASSWORD="2803"
+dart run test/jellyfin_live_test.dart
+```
+
+### ⚠️ Player media_kit — Guard contra `completed` prematuro (2026-06-26)
+
+**Problema:** No emulador, `player.stream.completed` do media_kit dispara imediatamente
+ao abrir um stream (codec não suportado em S/W rendering). Isso setava `_isEnded = true`,
+causando: ícone replay no centro, barra de progresso no fim, legendas não carregam.
+
+**Solução:** `UniversalPlayerController.mediaKit()` usa flag `engineConfirmed`:
+- Só aceita `_isEnded = true` se `engineConfirmed == true` (posição > 0 ou duração > 0)
+- Só aceita `_isPlaying = false` se `engineConfirmed || playing == true`
+- Inicializa `_isPlaying = true` (não lê `player.state.playing` que pode estar false)
+
+### Google Cast TV — mDNS + CastV2 + CORS Proxy (2026-06-26)
+
+**Problema:** `DeviceDiscovery` só usava SSDP (porta 1900), que apenas Chromecast gen 1
+responde. Chromecast gen 2/3/Ultra/Google TV usam mDNS (`_googlecast._tcp.local`, porta 5353).
+
+**Solução implementada (in-house, zero dependências externas):**
+
+```
+lib/cast/
+├── chromecast_discovery.dart   # mDNS PTR query → parse TXT/SRV records
+├── castv2_protocol.dart        # TLS:8009 → protobuf CastMessage → LAUNCH/LOAD/PLAY/SEEK
+├── cast_cors_proxy.dart        # HTTP proxy local → injeta Access-Control-Allow-Origin: *
+├── chromecast_controller.dart  # implements CastSession → MiningModePage compat
+├── device_discovery.dart       # atualizado: mDNS + SSDP + Jellyfin (3 métodos)
+├── cast_models.dart            # DiscoveredDevice ganhou isChromecast + port
+└── device_picker.dart          # badge "Chromecast" no UI
+```
+
+**Fluxo:** Discover (mDNS `_googlecast._tcp.local`) → CORS Proxy (stream Jellyfin) →
+CastV2 connect (TLS:8009) → LAUNCH CC1AD845 → LOAD media → Polling position →
+MiningModePage sincroniza legendas.
+
+**Dependências:** Nenhuma. Tudo implementado com `dart:io` (`RawDatagramSocket`,
+`SecureSocket`, `HttpServer`). `dart_cast` removido do pubspec (não resolvia).
+
+### MCP Server adb-mcp (tools/adb-mcp/server.py)
+MCP server Python que expõe ferramentas adb + agent-device via stdio.
+Registrado em `.mcp.json`. Precisa aprovar na primeira execução.
+
+**Tools disponíveis:**
+| Tool | Descrição |
+|------|-----------|
+| `screenshot` | Screenshot base64 PNG |
+| `ui_tree` | Hierarquia UI (XML) |
+| `snapshot` | Elementos interativos via agent-device (IDs como @e5) |
+| `tap` | Toque por coordenadas (x, y) |
+| `tap_element` | Toque por ID do agent-device (@e5) |
+| `fill_field` | Preencher campo por ID |
+| `swipe` | Deslizar na tela |
+| `input_text` | Digitar texto |
+| `key_event` | Evento de tecla (BACK=4, ENTER=66, etc.) |
+| `logcat` | Logs filtrados |
+| `shell` | Comando shell arbitrário |
+| `list_devices` | Listar dispositivos |
+| `launch_app` | Iniciar app |
+| `open_app` | Abrir app via agent-device |
+| `force_stop` | Forçar parada |

@@ -4,9 +4,11 @@
 /// Architecture:
 /// ```
 /// UI (MiningModePage, DevicePicker)
-///   → CastController / DlnaController  (ChangeNotifier)
-///     → SessionApi (abstract)          (server_core)
-///       → JellyfinSessionApi (concrete)(server_jellyfin)
+///   → CastController / DlnaController / ChromecastController (ChangeNotifier)
+///     → SessionApi (abstract)                (server_core)
+///       → JellyfinSessionApi (concrete)       (server_jellyfin)
+///     → CastV2Connection + CastCorsProxy      (in-house CastV2 protocol)
+///       → Chromecast device (mDNS discovery + TLS/8009)
 /// ```
 ///
 /// The app never imports `server_jellyfin` directly — it programs
@@ -14,8 +16,12 @@
 library;
 
 export 'cast_controller.dart';
+export 'cast_cors_proxy.dart';
 export 'cast_models.dart';
 export 'cast_providers.dart';
+export 'castv2_protocol.dart';
+export 'chromecast_controller.dart';
+export 'chromecast_discovery.dart';
 export 'device_discovery.dart';
 export 'device_picker.dart';
 export 'dlna_controller.dart';

@@ -1,284 +1,107 @@
 import 'dart:async';
 import 'dart:io';
-
 import 'package:server_core/server_core.dart';
-
 import 'cast_models.dart';
+import 'chromecast_discovery.dart';
 
-/// Discovers cast-capable devices on the local network.
-///
-/// Combines two discovery methods:
-/// 1. **SSDP/UPnP multicast** — finds TVs, Chromecasts, and other DLNA renderers.
-/// 2. **Jellyfin Device API** — finds devices registered on the Jellyfin server.
-///
-/// Results are merged and deduplicated into a single list of [CastTarget]s.
 class DeviceDiscovery {
   static const _multicastAddress = '239.255.255.250';
   static const _multicastPort = 1900;
   static const _ssdpTimeout = Duration(seconds: 4);
-
+  static const _mdnsTimeout = Duration(seconds: 5);
   static const _searchTargets = [
     'urn:dial-multiscreen-org:service:dial:1',
     'urn:schemas-upnp-org:device:MediaRenderer:1',
   ];
-
   final SessionApi _sessionApi;
-
   DeviceDiscovery(this._sessionApi);
 
-  /// Discovers all available cast targets.
-  ///
-  /// Runs SSDP and Jellyfin device listing in parallel.
   Future<List<CastTarget>> discover() async {
     final results = await Future.wait([
-      _discoverSsdpDevices(),
-      _discoverJellyfinDevices(),
+      _discoverSsdpDevices(), _discoverJellyfinDevices(), _discoverChromecastDevices(),
     ]);
-
-    final ssdpDevices = results[0] as List<DiscoveredDevice>;
-    final jellyfinDevices = results[1] as List<ServerDevice>;
-
-    return _mergeDevices(ssdpDevices, jellyfinDevices);
+    return _mergeDevices(results[0] as List<DiscoveredDevice>, results[1] as List<ServerDevice>, results[2] as List<DiscoveredDevice>);
   }
-
-  // ─── SSDP Discovery ────────────────────────────────────────────────────
 
   Future<List<DiscoveredDevice>> _discoverSsdpDevices() async {
     final devices = <String, DiscoveredDevice>{};
-
     RawDatagramSocket? socket;
-    try {
-      socket = await RawDatagramSocket.bind(InternetAddress.anyIPv4, 0);
-    } catch (_) {
-      return [];
-    }
-
-    // Send M-SEARCH for each target.
+    try { socket = await RawDatagramSocket.bind(InternetAddress.anyIPv4, 0); } catch (_) { return []; }
     for (final st in _searchTargets) {
-      final message = 'M-SEARCH * HTTP/1.1\r\n'
-          'HOST: $_multicastAddress:$_multicastPort\r\n'
-          'MAN: "ssdp:discover"\r\n'
-          'MX: 2\r\n'
-          'ST: $st\r\n'
-          '\r\n';
-      try {
-        socket.send(
-          message.codeUnits,
-          InternetAddress(_multicastAddress),
-          _multicastPort,
-        );
-      } catch (_) {}
+      final m = 'M-SEARCH * HTTP/1.1\r\nHOST: $_multicastAddress:$_multicastPort\r\nMAN: "ssdp:discover"\r\nMX: 2\r\nST: $st\r\n\r\n';
+      try { socket.send(m.codeUnits, InternetAddress(_multicastAddress), _multicastPort); } catch (_) {}
       await Future.delayed(const Duration(milliseconds: 200));
     }
-
     final completer = Completer<void>();
-    Timer(_ssdpTimeout, () {
-      if (!completer.isCompleted) completer.complete();
-    });
-
+    Timer(_ssdpTimeout, () { if (!completer.isCompleted) completer.complete(); });
     socket.listen((event) {
       if (event == RawSocketEvent.read) {
-        final datagram = socket?.receive();
-        if (datagram != null) {
-          final data = String.fromCharCodes(datagram.data);
-          final device = _parseSsdpResponse(data, datagram.address.address);
-          if (device != null) {
-            devices.putIfAbsent(device.ip, () => device);
-          }
+        final dg = socket?.receive();
+        if (dg != null) {
+          final d = _parseSsdpResponse(String.fromCharCodes(dg.data), dg.address.address);
+          if (d != null) devices.putIfAbsent(d.ip, () => d);
         }
       }
-    }, onDone: () {
-      if (!completer.isCompleted) completer.complete();
-    });
-
+    }, onDone: () { if (!completer.isCompleted) completer.complete(); });
     await completer.future;
-    try {
-      socket.close();
-    } catch (_) {}
-
+    try { socket.close(); } catch (_) {}
     return devices.values.toList();
   }
 
-  DiscoveredDevice? _parseSsdpResponse(String response, String ip) {
-    if (!response.contains('200 OK')) return null;
-
-    final headers = _parseHeaders(response);
-    final location = headers['location'] ?? '';
-    final server = headers['server'] ?? '';
-    final usn = headers['usn'] ?? '';
-    final st = headers['st'] ?? '';
-
-    final srv = server.toLowerCase();
-    String type;
-    CastDeviceIcon icon;
-
-    if (st.contains('dial') || srv.contains('chromecast')) {
-      type = 'Google Cast';
-      icon = CastDeviceIcon.cast;
-    } else if (srv.contains('roku')) {
-      type = 'Roku';
-      icon = CastDeviceIcon.tv;
-    } else if (srv.contains('fire') || srv.contains('amazon')) {
-      type = 'Fire TV';
-      icon = CastDeviceIcon.tv;
-    } else if (srv.contains('samsung') || srv.contains('tizen')) {
-      type = 'Samsung TV';
-      icon = CastDeviceIcon.tv;
-    } else if (srv.contains('lg') || srv.contains('webos')) {
-      type = 'LG TV';
-      icon = CastDeviceIcon.tv;
-    } else if (srv.contains('android')) {
-      type = 'Android TV';
-      icon = CastDeviceIcon.tv;
-    } else if (srv.contains('xbox')) {
-      type = 'Xbox';
-      icon = CastDeviceIcon.game;
-    } else if (srv.contains('playstation') || srv.contains('ps4') || srv.contains('ps5')) {
-      type = 'PlayStation';
-      icon = CastDeviceIcon.game;
-    } else {
-      type = 'Smart TV / Cast Device';
-      icon = CastDeviceIcon.tv;
-    }
-
-    final name = _extractDeviceName(server, usn, ip);
-
-    return DiscoveredDevice(
-      name: name,
-      type: type,
-      iconType: icon,
-      ip: ip,
-      locationUrl: location.isNotEmpty ? location : null,
-      serverInfo: server.isNotEmpty ? server : null,
-    );
+  DiscoveredDevice? _parseSsdpResponse(String r, String ip) {
+    if (!r.contains('200 OK')) return null;
+    final h = _parseHeaders(r);
+    final loc = h['location'] ?? '', srv = (h['server'] ?? '').toLowerCase(), usn = h['usn'] ?? '', st = h['st'] ?? '';
+    String t; CastDeviceIcon i;
+    if (st.contains('dial') || srv.contains('chromecast')) { t = 'Google Cast'; i = CastDeviceIcon.cast; }
+    else if (srv.contains('roku')) { t = 'Roku'; i = CastDeviceIcon.tv; }
+    else if (srv.contains('fire') || srv.contains('amazon')) { t = 'Fire TV'; i = CastDeviceIcon.tv; }
+    else if (srv.contains('samsung') || srv.contains('tizen')) { t = 'Samsung TV'; i = CastDeviceIcon.tv; }
+    else if (srv.contains('lg') || srv.contains('webos')) { t = 'LG TV'; i = CastDeviceIcon.tv; }
+    else if (srv.contains('android')) { t = 'Android TV'; i = CastDeviceIcon.tv; }
+    else if (srv.contains('xbox')) { t = 'Xbox'; i = CastDeviceIcon.game; }
+    else if (srv.contains('playstation') || srv.contains('ps4') || srv.contains('ps5')) { t = 'PlayStation'; i = CastDeviceIcon.game; }
+    else { t = 'Smart TV / Cast Device'; i = CastDeviceIcon.tv; }
+    return DiscoveredDevice(name: _dn(srv, usn, ip), type: t, iconType: i, ip: ip, locationUrl: loc.isNotEmpty ? loc : null, serverInfo: srv.isNotEmpty ? srv : null);
   }
 
-  Map<String, String> _parseHeaders(String response) {
-    final headers = <String, String>{};
-    for (final line in response.split('\r\n')) {
-      final colonIndex = line.indexOf(':');
-      if (colonIndex > 0) {
-        final key = line.substring(0, colonIndex).trim().toLowerCase();
-        final value = line.substring(colonIndex + 1).trim();
-        headers[key] = value;
-      }
-    }
-    return headers;
+  Map<String, String> _parseHeaders(String r) {
+    final m = <String, String>{};
+    for (final l in r.split('\r\n')) { final ci = l.indexOf(':'); if (ci > 0) m[l.substring(0, ci).trim().toLowerCase()] = l.substring(ci + 1).trim(); }
+    return m;
   }
 
-  String _extractDeviceName(String server, String usn, String ip) {
-    if (usn.isNotEmpty) {
-      final parts = usn.split('::');
-      if (parts.length >= 2) {
-        final uuidPart = parts[0].replaceAll('uuid:', '');
-        if (uuidPart.isNotEmpty && uuidPart.length < 30) return uuidPart;
-      }
-    }
-    if (server.isNotEmpty) {
-      final platformPart = server.split(' ').first;
-      final platform = platformPart.split('/').first;
-      if (platform.isNotEmpty && platform.length > 2) return platform;
-    }
+  String _dn(String sr, String us, String ip) {
+    if (us.isNotEmpty) { final ps = us.split('::'); if (ps.length >= 2) { final u = ps[0].replaceAll('uuid:', ''); if (u.isNotEmpty && u.length < 30) return u; } }
+    if (sr.isNotEmpty) { final p = sr.split(' ').first.split('/').first; if (p.isNotEmpty && p.length > 2) return p; }
     return 'Device ($ip)';
   }
 
-  // ─── Jellyfin Device Discovery ─────────────────────────────────────────
+  Future<List<DiscoveredDevice>> _discoverChromecastDevices() async {
+    try {
+      final cc = await ChromecastDiscovery.discover().timeout(_mdnsTimeout);
+      return cc.map((c) => DiscoveredDevice(name: c.name, type: 'Google Cast', iconType: CastDeviceIcon.cast, ip: c.host, port: c.port, isChromecast: true)).toList();
+    } catch (_) { return []; }
+  }
 
   Future<List<ServerDevice>> _discoverJellyfinDevices() async {
-    try {
-      final devices = await _sessionApi.getDevices();
-      return devices.where((d) => _isCastDevice(d)).toList();
-    } catch (_) {
-      return [];
-    }
+    try { final d = await _sessionApi.getDevices(); return d.where((x) => _isCastDevice(x)).toList(); } catch (_) { return []; }
   }
 
-  /// Heuristic to determine if a Jellyfin-registered device is a cast target.
-  ///
-  /// Filters out web browsers, mobile apps, and desktop clients.
-  /// Returns true for TVs, streaming sticks, game consoles, etc.
-  bool _isCastDevice(ServerDevice device) {
-    final app = device.appName?.toLowerCase() ?? '';
-    final devName = device.name.toLowerCase();
-
-    // Exclude non-cast clients.
-    const exclude = ['web', 'browser', 'mobile', 'html', 'desktop', 'phone', 'tablet'];
-    for (final term in exclude) {
-      if (app.contains(term)) return false;
-      if (devName.contains(term)) return false;
-    }
-
-    // Known TV/streaming/gaming platforms.
-    const platforms = [
-      'chromecast', 'android tv', 'google tv',
-      'fire tv', 'firestick', 'fire stick', 'amazon',
-      'samsung', 'tizen', 'lg tv', 'webos', 'lg ',
-      'roku', 'apple tv', 'nvidia shield', 'shield',
-      'xbox', 'playstation', 'ps4', 'ps5',
-      'tv', 'television', 'cast', 'dlna',
-      'raspberry', 'kodi', 'plex',
-    ];
-    for (final platform in platforms) {
-      if (app.contains(platform) || devName.contains(platform)) return true;
-    }
-
-    // Any non-generic, non-excluded app name is likely a TV client.
-    if (app.isNotEmpty && app != 'unknown' && app != 'android' && app != 'ios') {
-      return true;
-    }
-
-    return false;
+  bool _isCastDevice(ServerDevice d) {
+    final a = d.appName?.toLowerCase() ?? '', n = d.name.toLowerCase();
+    for (final w in ['web','browser','mobile','html','desktop','phone','tablet']) { if (a.contains(w)||n.contains(w)) return false; }
+    for (final p in ['chromecast','android tv','google tv','fire tv','firestick','amazon','samsung','tizen','lg tv','webos','roku','apple tv','shield','xbox','playstation','ps4','ps5','tv','television','cast','dlna','raspberry','kodi','plex']) { if (a.contains(p)||n.contains(p)) return true; }
+    return a.isNotEmpty && a != 'unknown' && a != 'android' && a != 'ios';
   }
 
-  // ─── Merge & Deduplicate ───────────────────────────────────────────────
-
-  /// Merges SSDP and Jellyfin devices, deduplicating by IP/name.
-  List<CastTarget> _mergeDevices(
-    List<DiscoveredDevice> ssdpDevices,
-    List<ServerDevice> jellyfinDevices,
-  ) {
-    final targets = <CastTarget>[];
-    final seenNames = <String>{};
-
-    // Add Jellyfin devices first (they have richer metadata).
-    for (final device in jellyfinDevices) {
-      final key = device.name.toLowerCase();
-      if (seenNames.contains(key)) continue;
-      seenNames.add(key);
-
-      // Try to match with an SSDP device on the same network.
-      final matchingSsdp = ssdpDevices.cast<DiscoveredDevice?>().firstWhere(
-            (d) => d!.ip == device.id || _namesSimilar(d.name, device.name),
-            orElse: () => null,
-          );
-
-      targets.add(CastTarget(
-        name: device.name,
-        type: device.appName ?? 'Jellyfin Client',
-        icon: CastDeviceIcon.tv,
-        jellyfinDevice: device,
-        ssdpDevice: matchingSsdp,
-      ));
-    }
-
-    // Add remaining SSDP devices.
-    for (final device in ssdpDevices) {
-      final key = device.name.toLowerCase();
-      if (seenNames.contains(key)) continue;
-      seenNames.add(key);
-
-      targets.add(CastTarget(
-        name: device.name,
-        type: device.type,
-        icon: device.iconType,
-        ssdpDevice: device,
-      ));
-    }
-
-    return targets;
+  List<CastTarget> _mergeDevices(List<DiscoveredDevice> ss, List<ServerDevice> jf, List<DiscoveredDevice> cc) {
+    final tg = <CastTarget>[], sn = <String>{};
+    for (final d in cc) { final k = d.name.toLowerCase(); if (!sn.contains(k)) { sn.add(k); tg.add(CastTarget(name: d.name, type: d.type, icon: d.iconType, ssdpDevice: d)); } }
+    for (final d in jf) { final k = d.name.toLowerCase(); if (!sn.contains(k)) { sn.add(k); final ms = ss.cast<DiscoveredDevice?>().firstWhere((s) => s!.ip == d.id || _sim(s.name, d.name), orElse: () => null); tg.add(CastTarget(name: d.name, type: d.appName ?? 'Jellyfin Client', icon: CastDeviceIcon.tv, jellyfinDevice: d, ssdpDevice: ms)); } }
+    for (final d in ss) { final k = d.name.toLowerCase(); if (!sn.contains(k)) { sn.add(k); tg.add(CastTarget(name: d.name, type: d.type, icon: d.iconType, ssdpDevice: d)); } }
+    return tg;
   }
 
-  bool _namesSimilar(String a, String b) {
-    return a.toLowerCase().replaceAll(' ', '') == b.toLowerCase().replaceAll(' ', '');
-  }
+  bool _sim(String a, String b) => a.toLowerCase().replaceAll(' ', '') == b.toLowerCase().replaceAll(' ', '');
 }

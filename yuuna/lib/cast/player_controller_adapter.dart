@@ -93,16 +93,26 @@ class UniversalPlayerController extends ChangeNotifier {
     wrapper._mkPlayer = player;
     wrapper._mkVideo = videoController;
 
+    // Track whether we've received real position data from the engine.
+    // Used to avoid trusting premature "playing = false" events before
+    // the media pipeline is fully initialized.
+    bool engineConfirmed = false;
+
     // Position stream.
     wrapper._mkPositionSub = player.stream.position.listen((pos) {
       wrapper._position = pos;
       wrapper._isInitialized = true;
+      if (!engineConfirmed && pos > Duration.zero) {
+        engineConfirmed = true;
+      }
       wrapper.notifyListeners();
     });
 
-    // Playing state.
+    // Playing state — only trust after engine has confirmed playback.
     wrapper._mkStateSub = player.stream.playing.listen((playing) {
-      wrapper._isPlaying = playing;
+      if (engineConfirmed || playing) {
+        wrapper._isPlaying = playing;
+      }
       wrapper._isEnded = false;
       wrapper.notifyListeners();
     });
@@ -110,18 +120,28 @@ class UniversalPlayerController extends ChangeNotifier {
     // Duration stream.
     wrapper._mkDurationSub = player.stream.duration.listen((dur) {
       wrapper._duration = dur;
+      if (!engineConfirmed && dur > Duration.zero) {
+        engineConfirmed = true;
+        wrapper._isPlaying = true;
+      }
       wrapper.notifyListeners();
     });
 
-    // Completed stream.
+    // Completed stream — only trust if engine confirmed playback first.
+    // On some platforms (emulator), media_kit may fire completed immediately
+    // if the codec is unsupported. We guard against false positives.
     wrapper._mkCompletedSub = player.stream.completed.listen((_) {
-      wrapper._isEnded = true;
-      wrapper._isPlaying = false;
+      if (engineConfirmed) {
+        wrapper._isEnded = true;
+        wrapper._isPlaying = false;
+        engineConfirmed = false;
+      }
       wrapper.notifyListeners();
     });
 
-    // Initial state.
-    wrapper._isPlaying = player.state.playing;
+    // Initial state. Default _isPlaying to true since the player was opened
+    // with play:true. The engine may emit false before the pipeline starts.
+    wrapper._isPlaying = true;
     wrapper._duration = player.state.duration;
     wrapper._position = player.state.position;
 

@@ -1020,7 +1020,7 @@ class _PlayerSourcePageState extends BaseSourcePageState<PlayerSourcePage>
               currentSubtitle: _currentSubtitle,
               autoPauseNotifier: _autoPauseNotifier,
               subtitleOptions: _subtitleOptionsNotifier.value,
-              controller: _playerController.vlcController!,
+              controller: _playerController,
               nearestSubtitle: getNearestSubtitle(),
               playingNotifier: _playingNotifier,
               endedNotifier: _endedNotifier,
@@ -1296,19 +1296,30 @@ class _PlayerSourcePageState extends BaseSourcePageState<PlayerSourcePage>
         _playingNotifier,
         _endedNotifier,
         _transcriptOpenNotifier,
+        _bufferingNotifier,
+        _durationNotifier,
       ],
       builder: (context, values, _) {
         bool playing = values.elementAt(0);
         bool ended = values.elementAt(1);
         bool transcriptOpen = values.elementAt(2);
+        bool buffering = values.elementAt(3);
+        Duration duration = values.elementAt(4);
 
         if (transcriptOpen) {
           return const SizedBox.shrink();
         }
 
+        // Only show the central play/pause icon when the player has loaded
+        // (duration > 0) and is not currently buffering.
+        final bool showIcon = _unhideDuringInitFlag &&
+            (!playing || ended) &&
+            !buffering &&
+            duration > Duration.zero;
+
         return Center(
           child: AnimatedOpacity(
-            opacity: _unhideDuringInitFlag && (!playing || ended) ? 1.0 : 0.0,
+            opacity: showIcon ? 1.0 : 0.0,
             duration: const Duration(milliseconds: 300),
             child: GestureDetector(
               child: DecoratedBox(
@@ -1417,40 +1428,29 @@ class _PlayerSourcePageState extends BaseSourcePageState<PlayerSourcePage>
         Duration position = values.elementAt(1);
         bool isEnded = values.elementAt(2);
 
+        // Guard: when duration hasn't loaded yet (media_kit), show a disabled
+        // slider at 0 instead of max=0 which renders incorrectly.
+        final bool durationLoaded = duration > Duration.zero;
+
         bool validPosition = duration.compareTo(position) >= 0;
-        double sliderValue = validPosition ? position.inSeconds.toDouble() : 0;
+        double sliderValue = durationLoaded && validPosition
+            ? position.inSeconds.toDouble()
+            : 0;
+        double sliderMax = durationLoaded && validPosition && !isEnded
+            ? duration.inSeconds.toDouble()
+            : 1.0;
 
         if (isEnded) {
-          sliderValue = 1;
+          sliderValue = sliderMax;
         }
 
         return Expanded(
           child: Slider(
             activeColor: Colors.red,
             inactiveColor: Theme.of(context).unselectedWidgetColor,
-            value: sliderValue,
-            max: (!validPosition || isEnded)
-                ? 1.0
-                : _playerController.duration.inSeconds.toDouble(),
-            onChangeStart: (value) {
-              _dialogSmartPaused = false;
-              _dialogSmartFocusFlag = false;
-              _sliderBeingDragged = true;
-
-              cancelHideTimer();
-            },
-            onChangeEnd: (value) {
-              if (!_isMenuHidden.value) {
-                _menuHideTimer = Timer(const Duration(seconds: 3), () {
-                  if (_playingNotifier.value) {
-                    _isMenuHidden.value = true;
-                  }
-                });
-              }
-              _sliderBeingDragged = false;
-              _bufferingNotifier.value = true;
-            },
-            onChanged: validPosition
+            value: sliderValue.clamp(0.0, sliderMax),
+            max: sliderMax,
+            onChanged: durationLoaded && validPosition
                 ? (progress) {
                     cancelHideTimer();
 
@@ -1459,6 +1459,27 @@ class _PlayerSourcePageState extends BaseSourcePageState<PlayerSourcePage>
                     _listeningSubtitle.value = getNearestSubtitle();
                     _autoPauseNotifier.value = null;
                     _autoPauseMemory = null;
+                  }
+                : null,
+            onChangeStart: durationLoaded && validPosition
+                ? (value) {
+                    _dialogSmartPaused = false;
+                    _dialogSmartFocusFlag = false;
+                    _sliderBeingDragged = true;
+                    cancelHideTimer();
+                  }
+                : null,
+            onChangeEnd: durationLoaded && validPosition
+                ? (value) {
+                    if (!_isMenuHidden.value) {
+                      _menuHideTimer = Timer(const Duration(seconds: 3), () {
+                        if (_playingNotifier.value) {
+                          _isMenuHidden.value = true;
+                        }
+                      });
+                    }
+                    _sliderBeingDragged = false;
+                    _bufferingNotifier.value = true;
                   }
                 : null,
           ),
@@ -1815,7 +1836,7 @@ class _PlayerSourcePageState extends BaseSourcePageState<PlayerSourcePage>
                 title: widget.item!.title,
                 subtitles: _subtitleItem.controller.subtitles,
                 subtitleController: _subtitleItem.controller,
-                controller: _playerController.vlcController!,
+                controller: _playerController,
                 autoPauseNotifier: _autoPauseNotifier,
                 playingNotifier: _playingNotifier,
                 endedNotifier: _endedNotifier,

@@ -156,7 +156,9 @@ class _JellyfinBrowsePageState extends ConsumerState<JellyfinBrowsePage> {
       itemCount: _items!.length,
       itemBuilder: (context, index) {
         final item = _items![index];
-        final isFolder = item.isFolder == true;
+        final isFolder = item.isFolder == true ||
+            item.type == 'Series' || item.type == 'Season' ||
+            item.type == 'Folder' || item.type == 'CollectionFolder';
         final imageTag = item.imageTags.isNotEmpty
             ? (item.imageTags['Primary'] ?? item.imageTags.values.first)
             : null;
