@@ -769,6 +769,7 @@ class AppModel with ChangeNotifier {
         PlayerLocalMediaSource.instance,
         PlayerYoutubeSource.instance,
         PlayerNetworkStreamSource.instance,
+        PlayerJellyfinSource.instance,
       ],
       ReaderMediaType.instance: [
         ReaderTtuSource.instance,

@@ -1,0 +1,338 @@
+--------- beginning of main
+07-04 18:26:06.836 18499 18722 I flutter : The Dart VM service is listening on http://127.0.0.1:39811/JfLIG6F3fwE=/
+07-04 18:26:09.466 18499 18687 I flutter : media_kit: WARNING: package:media_kit_native_event_loop not found.
+07-04 18:26:09.846 18499 18687 I flutter : flutter_logs: Logs Configuration added.
+07-04 18:26:27.436 18499 18687 I flutter : ╔══════════════════════════════════════════════════════╗
+07-04 18:26:27.437 18499 18687 I flutter : ║                 ISAR CONNECT STARTED                 ║
+07-04 18:26:27.437 18499 18687 I flutter : ╟──────────────────────────────────────────────────────╢
+07-04 18:26:27.437 18499 18687 I flutter : ║         Open the link to connect to the Isar         ║
+07-04 18:26:27.437 18499 18687 I flutter : ║        Inspector while this build is running.        ║
+07-04 18:26:27.438 18499 18687 I flutter : ╟──────────────────────────────────────────────────────╢
+07-04 18:26:27.438 18499 18687 I flutter : ║ https://inspect.isar.dev/3.1.0+1/#/39811/JfLIG6F3fwE ║
+07-04 18:26:27.438 18499 18687 I flutter : ╚══════════════════════════════════════════════════════╝
+07-04 18:26:28.362 18499 18917 I flutter : ╔══════════════════════════════════════════════════════╗
+07-04 18:26:28.362 18499 18917 I flutter : ║                 ISAR CONNECT STARTED                 ║
+07-04 18:26:28.362 18499 18917 I flutter : ╟──────────────────────────────────────────────────────╢
+07-04 18:26:28.363 18499 18917 I flutter : ║         Open the link to connect to the Isar         ║
+07-04 18:26:28.363 18499 18917 I flutter : ║        Inspector while this build is running.        ║
+07-04 18:26:28.363 18499 18917 I flutter : ╟──────────────────────────────────────────────────────╢
+07-04 18:26:28.363 18499 18917 I flutter : ║ https://inspect.isar.dev/3.1.0+1/#/39811/JfLIG6F3fwE ║
+07-04 18:26:28.363 18499 18917 I flutter : ╚══════════════════════════════════════════════════════╝
+07-04 18:26:32.566 18499 18918 I flutter : ╔══════════════════════════════════════════════════════╗
+07-04 18:26:32.566 18499 18918 I flutter : ║                 ISAR CONNECT STARTED                 ║
+07-04 18:26:32.566 18499 18918 I flutter : ╟──────────────────────────────────────────────────────╢
+07-04 18:26:32.566 18499 18918 I flutter : ║         Open the link to connect to the Isar         ║
+07-04 18:26:32.566 18499 18918 I flutter : ║        Inspector while this build is running.        ║
+07-04 18:26:32.566 18499 18918 I flutter : ╟──────────────────────────────────────────────────────╢
+07-04 18:26:32.566 18499 18918 I flutter : ║ https://inspect.isar.dev/3.1.0+1/#/39811/JfLIG6F3fwE ║
+07-04 18:26:32.566 18499 18918 I flutter : ╚══════════════════════════════════════════════════════╝
+07-04 18:26:32.759 18499 18687 I flutter : {"fromPackageName":null,"fromSignatures":null,"action":"android.intent.action.MAIN","data":null,"categories":["android.intent.category.LAUNCHER"],"extra":null}
+07-04 18:26:32.765 18499 18687 I flutter : NowPlaying is part of app.arianneorpilla.yuuna
+07-04 18:26:32.836 18499 18917 I flutter : ╔══════════════════════════════════════════════════════╗
+07-04 18:26:32.836 18499 18917 I flutter : ║                 ISAR CONNECT STARTED                 ║
+07-04 18:26:32.837 18499 18917 I flutter : ╟──────────────────────────────────────────────────────╢
+07-04 18:26:32.838 18499 18917 I flutter : ║         Open the link to connect to the Isar         ║
+07-04 18:26:32.838 18499 18917 I flutter : ║        Inspector while this build is running.        ║
+07-04 18:26:32.839 18499 18917 I flutter : ╟──────────────────────────────────────────────────────╢
+07-04 18:26:32.839 18499 18917 I flutter : ║ https://inspect.isar.dev/3.1.0+1/#/39811/JfLIG6F3fwE ║
+07-04 18:26:32.839 18499 18917 I flutter : ╚══════════════════════════════════════════════════════╝
+07-04 18:26:34.039 18499 18687 I flutter : [JellyfinLibrary] Loading library...
+07-04 18:26:34.041 18499 18687 I flutter : [JellyfinLibrary] Not logged in, restoring session...
+07-04 18:26:36.148 18499 18687 I flutter : [JellyfinLibrary] ❌ Load error: LateInitializationError: Field '_preferences@165519058' has not been initialized.
+07-04 18:26:40.895 18499 18687 I flutter : GET index.html – 200; mime: text/html
+07-04 18:26:41.062 18499 18687 I flutter : GET _app/immutable/assets/_layout-458bc673.css – 200; mime: text/css
+07-04 18:26:41.091 18499 18687 I flutter : GET _app/immutable/assets/store-ad073191.css – 200; mime: text/css
+07-04 18:26:41.100 18499 18687 I flutter : GET _app/immutable/start-31285994.js – 200; mime: text/javascript
+07-04 18:26:41.106 18499 18687 I flutter : GET _app/immutable/chunks/index-be8ea2fc.js – 200; mime: text/javascript
+07-04 18:26:41.111 18499 18687 I flutter : GET _app/immutable/chunks/singletons-6176161c.js – 200; mime: text/javascript
+07-04 18:26:41.167 18499 18687 I flutter : GET _app/immutable/chunks/stores-6a6870f3.js – 200; mime: text/javascript
+07-04 18:26:41.173 18499 18687 I flutter : GET _app/immutable/components/pages/_layout.svelte-9a3342ae.js – 200; mime: text/javascript
+07-04 18:26:41.186 18499 18687 I flutter : GET _app/immutable/chunks/store-fb60485f.js – 200; mime: text/javascript
+07-04 18:26:41.192 18499 18687 I flutter : GET _app/immutable/chunks/error-handler-df8dffd6.js – 200; mime: text/javascript
+07-04 18:26:41.196 18499 18687 I flutter : GET _app/immutable/chunks/fonts-e5a631ed.js – 200; mime: text/javascript
+07-04 18:26:41.212 18499 18687 I flutter : GET _app/immutable/components/pages/_page.svelte-a2e11aab.js – 200; mime: text/javascript
+07-04 18:26:41.292 18499 18687 I flutter : GET fonts/noto-serif-v21-regular.woff2 – 200; mime: font/woff2
+07-04 18:26:41.324 18499 18687 I flutter : GET fonts/noto-sans-v42-regular.woff2 – 200; mime: font/woff2
+07-04 18:26:41.329 18499 18687 I flutter : GET _app/immutable/chunks/format-page-title-2ca75b98.js – 200; mime: text/javascript
+07-04 18:26:41.335 18499 18687 I flutter : GET _app/immutable/chunks/0-2149c851.js – 200; mime: text/javascript
+07-04 18:26:41.340 18499 18687 I flutter : GET _app/immutable/chunks/1-36f4ec71.js – 200; mime: text/javascript
+07-04 18:26:41.346 18499 18687 I flutter : GET _app/immutable/components/error.svelte-5086bf37.js – 200; mime: text/javascript
+07-04 18:26:41.362 18499 18687 I flutter : GET _app/immutable/chunks/2-b84d59c0.js – 200; mime: text/javascript
+07-04 18:26:41.674 18499 18687 I flutter : GET _app/immutable/chunks/5-3648d17b.js – 200; mime: text/javascript
+07-04 18:26:41.680 18499 18687 I flutter : GET _app/immutable/components/pages/manage/_page.svelte-788e593b.js – 200; mime: text/javascript
+07-04 18:26:41.706 18499 18687 I flutter : GET _app/immutable/assets/fa-32503cb2.css – 200; mime: text/css
+07-04 18:26:41.711 18499 18687 I flutter : GET _app/immutable/chunks/fa-33dddbd3.js – 200; mime: text/javascript
+07-04 18:26:41.715 18499 18687 I flutter : GET _app/immutable/chunks/index-61bb0c2c.js – 200; mime: text/javascript
+07-04 18:26:41.720 18499 18687 I flutter : GET _app/immutable/chunks/merged-header-icon-5b1d438d.js – 200; mime: text/javascript
+07-04 18:26:41.982 18499 18687 I flutter : GET icons/regular-icon@16x16.png – 200; mime: image/png
+07-04 18:26:41.989 18499 18687 I flutter : GET icons/regular-icon@32x32.png – 200; mime: image/png
+07-04 18:26:41.995 18499 18687 I flutter : GET service-worker.js – 200; mime: text/javascript
+07-04 18:26:42.000 18499 18687 I flutter : GET favicon.png – 200; mime: image/png
+07-04 18:26:42.064 18499 18687 I flutter : GET _app/immutable/assets/fa-32503cb2.css – 200; mime: text/css
+07-04 18:26:42.074 18499 18687 I flutter : GET _app/immutable/assets/store-ad073191.css – 200; mime: text/css
+07-04 18:26:42.078 18499 18687 I flutter : GET _app/immutable/assets/_page-b843624e.css – 200; mime: text/css
+07-04 18:26:42.187 18499 18687 I flutter : GET _app/immutable/assets/_layout-458bc673.css – 200; mime: text/css
+07-04 18:26:42.197 18499 18687 I flutter : GET _app/immutable/chunks/fonts-e5a631ed.js – 200; mime: text/javascript
+07-04 18:26:42.206 18499 18687 I flutter : GET _app/immutable/chunks/theme-option-f9f8f697.js – 200; mime: text/javascript
+07-04 18:26:42.215 18499 18687 I flutter : GET _app/immutable/chunks/1-36f4ec71.js – 200; mime: text/javascript
+07-04 18:26:42.315 18499 18687 I flutter : GET _app/immutable/components/pages/_page.svelte-a2e11aab.js – 200; mime: text/javascript
+07-04 18:26:42.325 18499 18687 I flutter : GET _app/immutable/chunks/2-b84d59c0.js – 200; mime: text/javascript
+07-04 18:26:42.340 18499 18687 I flutter : GET _app/immutable/chunks/4-761fe457.js – 200; mime: text/javascript
+07-04 18:26:42.349 18499 18687 I flutter : GET _app/immutable/chunks/index-61bb0c2c.js – 200; mime: text/javascript
+07-04 18:26:42.354 18499 18687 I flutter : GET _app/immutable/chunks/6-482dfd9c.js – 200; mime: text/javascript
+07-04 18:26:42.443 18499 18687 I flutter : GET _app/immutable/chunks/stores-6a6870f3.js – 200; mime: text/javascript
+07-04 18:26:42.450 18499 18687 I flutter : GET _app/immutable/components/error.svelte-5086bf37.js – 200; mime: text/javascript
+07-04 18:26:42.456 18499 18687 I flutter : GET _app/immutable/chunks/5-3648d17b.js – 200; mime: text/javascript
+07-04 18:26:42.462 18499 18687 I flutter : GET _app/immutable/chunks/format-page-title-2ca75b98.js – 200; mime: text/javascript
+07-04 18:26:42.470 18499 18687 I flutter : GET _app/immutable/chunks/0-2149c851.js – 200; mime: text/javascript
+07-04 18:26:42.479 18499 18687 I flutter : GET _app/immutable/chunks/singletons-6176161c.js – 200; mime: text/javascript
+07-04 18:26:42.483 18499 18687 I flutter : GET _app/immutable/chunks/3-ad0bef55.js – 200; mime: text/javascript
+07-04 18:26:42.490 18499 18687 I flutter : GET _app/immutable/components/pages/auth/_page.svelte-90066a89.js – 200; mime: text/javascript
+07-04 18:26:42.498 18499 18687 I flutter : GET _app/immutable/chunks/error-handler-df8dffd6.js – 200; mime: text/javascript
+07-04 18:26:42.504 18499 18687 I flutter : GET _app/immutable/chunks/fa-33dddbd3.js – 200; mime: text/javascript
+07-04 18:26:42.511 18499 18687 I flutter : GET _app/immutable/chunks/index-be8ea2fc.js – 200; mime: text/javascript
+07-04 18:26:42.518 18499 18687 I flutter : GET _app/immutable/start-31285994.js – 200; mime: text/javascript
+07-04 18:26:42.525 18499 18687 I flutter : GET _app/immutable/chunks/merged-header-icon-5b1d438d.js – 200; mime: text/javascript
+07-04 18:26:42.547 18499 18687 I flutter : GET _app/immutable/components/pages/manage/_page.svelte-788e593b.js – 200; mime: text/javascript
+07-04 18:26:42.558 18499 18687 I flutter : GET _app/immutable/components/pages/_layout.svelte-9a3342ae.js – 200; mime: text/javascript
+07-04 18:26:42.583 18499 18687 I flutter : GET _app/immutable/components/pages/b/_page.svelte-f75ac4b0.js – 200; mime: text/javascript
+07-04 18:26:42.596 18499 18687 I flutter : GET _app/immutable/chunks/store-fb60485f.js – 200; mime: text/javascript
+07-04 18:26:42.611 18499 18687 I flutter : GET _app/immutable/components/pages/settings/_page.svelte-2a445305.js – 200; mime: text/javascript
+07-04 18:26:42.639 18499 18687 I flutter : GET favicon.png – 200; mime: image/png
+07-04 18:26:42.643 18499 18687 I flutter : GET apple-touch-icon.png – 200; mime: image/png
+07-04 18:26:42.672 18499 18687 I flutter : GET favicon.ico – 200; mime: image/x-icon
+07-04 18:26:42.865 18499 18687 I flutter : GET fonts/genEiKoburiMin5.ttf – 200; mime: application/x-font-ttf
+07-04 18:26:42.895 18499 18687 I flutter : GET fonts/klee-one-v7-600.woff – 200; mime: application/x-font-woff
+07-04 18:26:42.918 18499 18687 I flutter : GET fonts/klee-one-v7-600.woff2 – 200; mime: font/woff2
+07-04 18:26:43.172 18499 18687 I flutter : GET fonts/klee-one-v7-regular.woff – 200; mime: application/x-font-woff
+07-04 18:26:43.218 18499 18687 I flutter : GET fonts/klee-one-v7-regular.woff2 – 200; mime: font/woff2
+07-04 18:26:43.339 18499 18687 I flutter : GET fonts/noto-sans-v42-500.woff – 200; mime: application/x-font-woff
+07-04 18:26:43.454 18499 18687 I flutter : GET fonts/noto-sans-v42-500.woff2 – 200; mime: font/woff2
+07-04 18:26:43.498 18499 18687 I flutter : GET fonts/noto-sans-v42-700.woff – 200; mime: application/x-font-woff
+07-04 18:26:43.525 18499 18687 I flutter : GET fonts/noto-sans-v42-700.woff2 – 200; mime: font/woff2
+07-04 18:26:43.547 18499 18687 I flutter : GET fonts/noto-sans-v42-regular.woff – 200; mime: application/x-font-woff
+07-04 18:26:43.567 18499 18687 I flutter : GET fonts/noto-sans-v42-regular.woff2 – 200; mime: font/woff2
+07-04 18:26:43.802 18499 18687 I flutter : GET fonts/noto-serif-v21-500.woff – 200; mime: application/x-font-woff
+07-04 18:26:43.870 18499 18687 I flutter : GET fonts/noto-serif-v21-500.woff2 – 200; mime: font/woff2
+07-04 18:26:44.027 18499 18687 I flutter : GET fonts/noto-serif-v21-700.woff – 200; mime: application/x-font-woff
+07-04 18:26:44.197 18499 18687 I flutter : GET fonts/noto-serif-v21-700.woff2 – 200; mime: font/woff2
+07-04 18:26:44.338 18499 18687 I flutter : GET fonts/noto-serif-v21-regular.woff – 200; mime: application/x-font-woff
+07-04 18:26:44.347 18499 18687 I flutter : GET fonts/noto-serif-v21-regular.woff2 – 200; mime: font/woff2
+07-04 18:26:44.765 18499 18687 I flutter : GET fonts/shippori-mincho-v14-500.woff – 200; mime: application/x-font-woff
+07-04 18:26:44.967 18499 18687 I flutter : GET fonts/shippori-mincho-v14-500.woff2 – 200; mime: font/woff2
+07-04 18:26:44.997 18499 18687 I flutter : GET fonts/shippori-mincho-v14-700.woff – 200; mime: application/x-font-woff
+07-04 18:26:45.015 18499 18687 I flutter : GET fonts/shippori-mincho-v14-700.woff2 – 200; mime: font/woff2
+07-04 18:26:45.052 18499 18687 I flutter : GET fonts/shippori-mincho-v14-regular.woff – 200; mime: application/x-font-woff
+07-04 18:26:45.107 18499 18687 I flutter : GET fonts/shippori-mincho-v14-regular.woff2 – 200; mime: font/woff2
+07-04 18:26:45.122 18499 18687 I flutter : GET icons/maskable-icon@128x128.png – 200; mime: image/png
+07-04 18:26:45.149 18499 18687 I flutter : GET icons/maskable-icon@16x16.png – 200; mime: image/png
+07-04 18:26:45.171 18499 18687 I flutter : GET icons/maskable-icon@192x192.png – 200; mime: image/png
+07-04 18:26:45.180 18499 18687 I flutter : GET icons/maskable-icon@32x32.png – 200; mime: image/png
+07-04 18:26:45.197 18499 18687 I flutter : GET icons/maskable-icon@512x512.png – 200; mime: image/png
+07-04 18:26:45.206 18499 18687 I flutter : GET icons/regular-icon@16x16.png – 200; mime: image/png
+07-04 18:26:45.215 18499 18687 I flutter : GET icons/regular-icon@192x192.png – 200; mime: image/png
+07-04 18:26:45.228 18499 18687 I flutter : GET icons/regular-icon@32x32.png – 200; mime: image/png
+07-04 18:26:45.243 18499 18687 I flutter : GET icons/regular-icon@512x512.png – 200; mime: image/png
+07-04 18:26:45.248 18499 18687 I flutter : GET manifest.webmanifest – 200; mime: application/manifest+json
+07-04 18:26:45.257 18499 18687 I flutter : GET index.html – 200; mime: text/html
+07-04 18:26:45.261 18499 18687 I flutter : GET safari-pinned-tab.svg – 200; mime: image/svg+xml
+07-04 18:26:45.270 18499 18687 I flutter : GET __data.json – 200; mime: application/json
+07-04 18:26:45.284 18499 18687 I flutter : GET auth.html – 200; mime: text/html
+07-04 18:26:45.288 18499 18687 I flutter : GET auth/__data.json – 200; mime: application/json
+07-04 18:26:45.297 18499 18687 I flutter : GET b.html – 200; mime: text/html
+07-04 18:26:45.311 18499 18687 I flutter : GET b/__data.json – 200; mime: application/json
+07-04 18:26:45.316 18499 18687 I flutter : GET manage.html – 200; mime: text/html
+07-04 18:26:45.324 18499 18687 I flutter : GET manage/__data.json – 200; mime: application/json
+07-04 18:26:45.332 18499 18687 I flutter : GET settings.html – 200; mime: text/html
+07-04 18:26:45.342 18499 18687 I flutter : GET settings/__data.json – 200; mime: application/json
+07-04 18:28:39.110 19978 20029 I flutter : The Dart VM service is listening on http://127.0.0.1:39403/NEjeFzJOnbE=/
+07-04 18:28:41.509 19978 20012 I flutter : media_kit: WARNING: package:media_kit_native_event_loop not found.
+07-04 18:28:41.681 19978 20012 I flutter : flutter_logs: Logs Configuration added.
+07-04 18:28:43.636 19978 20012 I flutter : ╔══════════════════════════════════════════════════════╗
+07-04 18:28:43.636 19978 20012 I flutter : ║                 ISAR CONNECT STARTED                 ║
+07-04 18:28:43.637 19978 20012 I flutter : ╟──────────────────────────────────────────────────────╢
+07-04 18:28:43.637 19978 20012 I flutter : ║         Open the link to connect to the Isar         ║
+07-04 18:28:43.637 19978 20012 I flutter : ║        Inspector while this build is running.        ║
+07-04 18:28:43.637 19978 20012 I flutter : ╟──────────────────────────────────────────────────────╢
+07-04 18:28:43.637 19978 20012 I flutter : ║ https://inspect.isar.dev/3.1.0+1/#/39403/NEjeFzJOnbE ║
+07-04 18:28:43.638 19978 20012 I flutter : ╚══════════════════════════════════════════════════════╝
+07-04 18:28:44.206 19978 20057 I flutter : ╔══════════════════════════════════════════════════════╗
+07-04 18:28:44.206 19978 20057 I flutter : ║                 ISAR CONNECT STARTED                 ║
+07-04 18:28:44.207 19978 20057 I flutter : ╟──────────────────────────────────────────────────────╢
+07-04 18:28:44.207 19978 20057 I flutter : ║         Open the link to connect to the Isar         ║
+07-04 18:28:44.207 19978 20057 I flutter : ║        Inspector while this build is running.        ║
+07-04 18:28:44.207 19978 20057 I flutter : ╟──────────────────────────────────────────────────────╢
+07-04 18:28:44.208 19978 20057 I flutter : ║ https://inspect.isar.dev/3.1.0+1/#/39403/NEjeFzJOnbE ║
+07-04 18:28:44.208 19978 20057 I flutter : ╚══════════════════════════════════════════════════════╝
+07-04 18:28:47.250 19978 20058 I flutter : ╔══════════════════════════════════════════════════════╗
+07-04 18:28:47.250 19978 20058 I flutter : ║                 ISAR CONNECT STARTED                 ║
+07-04 18:28:47.251 19978 20058 I flutter : ╟──────────────────────────────────────────────────────╢
+07-04 18:28:47.251 19978 20058 I flutter : ║         Open the link to connect to the Isar         ║
+07-04 18:28:47.251 19978 20058 I flutter : ║        Inspector while this build is running.        ║
+07-04 18:28:47.251 19978 20058 I flutter : ╟──────────────────────────────────────────────────────╢
+07-04 18:28:47.251 19978 20058 I flutter : ║ https://inspect.isar.dev/3.1.0+1/#/39403/NEjeFzJOnbE ║
+07-04 18:28:47.251 19978 20058 I flutter : ╚══════════════════════════════════════════════════════╝
+07-04 18:28:47.405 19978 20012 I flutter : {"fromPackageName":null,"fromSignatures":null,"action":"android.intent.action.MAIN","data":null,"categories":["android.intent.category.LAUNCHER"],"extra":null}
+07-04 18:28:47.409 19978 20012 I flutter : NowPlaying is part of app.arianneorpilla.yuuna
+07-04 18:28:47.476 19978 20057 I flutter : ╔══════════════════════════════════════════════════════╗
+07-04 18:28:47.476 19978 20057 I flutter : ║                 ISAR CONNECT STARTED                 ║
+07-04 18:28:47.476 19978 20057 I flutter : ╟──────────────────────────────────────────────────────╢
+07-04 18:28:47.477 19978 20057 I flutter : ║         Open the link to connect to the Isar         ║
+07-04 18:28:47.477 19978 20057 I flutter : ║        Inspector while this build is running.        ║
+07-04 18:28:47.477 19978 20057 I flutter : ╟──────────────────────────────────────────────────────╢
+07-04 18:28:47.477 19978 20057 I flutter : ║ https://inspect.isar.dev/3.1.0+1/#/39403/NEjeFzJOnbE ║
+07-04 18:28:47.477 19978 20057 I flutter : ╚══════════════════════════════════════════════════════╝
+07-04 18:28:48.853 19978 20012 I flutter : [JellyfinLibrary] Loading library...
+07-04 18:28:48.855 19978 20012 I flutter : [JellyfinLibrary] Not logged in, restoring session...
+07-04 18:28:50.588 19978 20012 I flutter : [JellyfinLibrary] ❌ Load error: LateInitializationError: Field '_preferences@165519058' has not been initialized.
+07-04 18:28:53.098 19978 20012 I flutter : GET index.html – 200; mime: text/html
+07-04 18:28:53.345 19978 20012 I flutter : GET _app/immutable/assets/_layout-458bc673.css – 200; mime: text/css
+07-04 18:28:53.360 19978 20012 I flutter : GET _app/immutable/assets/store-ad073191.css – 200; mime: text/css
+07-04 18:28:53.386 19978 20012 I flutter : GET _app/immutable/start-31285994.js – 200; mime: text/javascript
+07-04 18:28:53.416 19978 20012 I flutter : GET _app/immutable/chunks/index-be8ea2fc.js – 200; mime: text/javascript
+07-04 18:28:53.424 19978 20012 I flutter : GET _app/immutable/chunks/singletons-6176161c.js – 200; mime: text/javascript
+07-04 18:28:53.432 19978 20012 I flutter : GET _app/immutable/chunks/store-fb60485f.js – 200; mime: text/javascript
+07-04 18:28:53.439 19978 20012 I flutter : GET _app/immutable/components/pages/_layout.svelte-9a3342ae.js – 200; mime: text/javascript
+07-04 18:28:53.445 19978 20012 I flutter : GET _app/immutable/chunks/stores-6a6870f3.js – 200; mime: text/javascript
+07-04 18:28:53.494 19978 20012 I flutter : GET _app/immutable/chunks/error-handler-df8dffd6.js – 200; mime: text/javascript
+07-04 18:28:53.499 19978 20012 I flutter : GET _app/immutable/chunks/fonts-e5a631ed.js – 200; mime: text/javascript
+07-04 18:28:53.512 19978 20012 I flutter : GET _app/immutable/components/pages/_page.svelte-a2e11aab.js – 200; mime: text/javascript
+07-04 18:28:53.517 19978 20012 I flutter : GET _app/immutable/chunks/format-page-title-2ca75b98.js – 200; mime: text/javascript
+07-04 18:28:53.531 19978 20012 I flutter : GET fonts/noto-sans-v42-regular.woff2 – 200; mime: font/woff2
+07-04 18:28:53.544 19978 20012 I flutter : GET fonts/noto-serif-v21-regular.woff2 – 200; mime: font/woff2
+07-04 18:28:53.566 19978 20012 I flutter : GET _app/immutable/chunks/0-2149c851.js – 200; mime: text/javascript
+07-04 18:28:53.596 19978 20012 I flutter : GET _app/immutable/chunks/1-36f4ec71.js – 200; mime: text/javascript
+07-04 18:28:53.601 19978 20012 I flutter : GET _app/immutable/components/error.svelte-5086bf37.js – 200; mime: text/javascript
+07-04 18:28:53.606 19978 20012 I flutter : GET _app/immutable/chunks/2-b84d59c0.js – 200; mime: text/javascript
+07-04 18:28:53.838 19978 20012 I flutter : GET _app/immutable/chunks/5-3648d17b.js – 200; mime: text/javascript
+07-04 18:28:53.857 19978 20012 I flutter : GET _app/immutable/components/pages/manage/_page.svelte-788e593b.js – 200; mime: text/javascript
+07-04 18:28:53.862 19978 20012 I flutter : GET _app/immutable/chunks/fa-33dddbd3.js – 200; mime: text/javascript
+07-04 18:28:53.867 19978 20012 I flutter : GET _app/immutable/assets/fa-32503cb2.css – 200; mime: text/css
+07-04 18:28:53.872 19978 20012 I flutter : GET _app/immutable/chunks/index-61bb0c2c.js – 200; mime: text/javascript
+07-04 18:28:53.878 19978 20012 I flutter : GET _app/immutable/chunks/merged-header-icon-5b1d438d.js – 200; mime: text/javascript
+07-04 18:28:54.009 19978 20012 I flutter : GET service-worker.js – 200; mime: text/javascript
+07-04 18:28:54.041 19978 20012 I flutter : GET favicon.png – 200; mime: image/png
+07-04 18:28:54.047 19978 20012 I flutter : GET icons/regular-icon@16x16.png – 200; mime: image/png
+07-04 18:28:54.052 19978 20012 I flutter : GET icons/regular-icon@32x32.png – 200; mime: image/png
+07-04 18:28:54.071 19978 20012 I flutter : GET _app/immutable/assets/fa-32503cb2.css – 200; mime: text/css
+07-04 18:28:54.082 19978 20012 I flutter : GET _app/immutable/assets/store-ad073191.css – 200; mime: text/css
+07-04 18:28:54.090 19978 20012 I flutter : GET _app/immutable/assets/_page-b843624e.css – 200; mime: text/css
+07-04 18:28:54.115 19978 20012 I flutter : GET _app/immutable/assets/_layout-458bc673.css – 200; mime: text/css
+07-04 18:28:54.125 19978 20012 I flutter : GET _app/immutable/chunks/fonts-e5a631ed.js – 200; mime: text/javascript
+07-04 18:28:54.129 19978 20012 I flutter : GET _app/immutable/chunks/theme-option-f9f8f697.js – 200; mime: text/javascript
+07-04 18:28:54.135 19978 20012 I flutter : GET _app/immutable/chunks/1-36f4ec71.js – 200; mime: text/javascript
+07-04 18:28:54.146 19978 20012 I flutter : GET _app/immutable/components/pages/_page.svelte-a2e11aab.js – 200; mime: text/javascript
+07-04 18:28:54.159 19978 20012 I flutter : GET _app/immutable/chunks/2-b84d59c0.js – 200; mime: text/javascript
+07-04 18:28:54.168 19978 20012 I flutter : GET _app/immutable/chunks/4-761fe457.js – 200; mime: text/javascript
+07-04 18:28:54.173 19978 20012 I flutter : GET _app/immutable/chunks/6-482dfd9c.js – 200; mime: text/javascript
+07-04 18:28:54.186 19978 20012 I flutter : GET _app/immutable/chunks/index-61bb0c2c.js – 200; mime: text/javascript
+07-04 18:28:54.205 19978 20012 I flutter : GET _app/immutable/chunks/stores-6a6870f3.js – 200; mime: text/javascript
+07-04 18:28:54.212 19978 20012 I flutter : GET _app/immutable/components/error.svelte-5086bf37.js – 200; mime: text/javascript
+07-04 18:28:54.219 19978 20012 I flutter : GET _app/immutable/chunks/5-3648d17b.js – 200; mime: text/javascript
+07-04 18:28:54.279 19978 20012 I flutter : GET _app/immutable/chunks/format-page-title-2ca75b98.js – 200; mime: text/javascript
+07-04 18:28:54.284 19978 20012 I flutter : GET _app/immutable/chunks/0-2149c851.js – 200; mime: text/javascript
+07-04 18:28:54.290 19978 20012 I flutter : GET _app/immutable/chunks/3-ad0bef55.js – 200; mime: text/javascript
+07-04 18:28:54.298 19978 20012 I flutter : GET _app/immutable/chunks/singletons-6176161c.js – 200; mime: text/javascript
+07-04 18:28:54.307 19978 20012 I flutter : GET _app/immutable/chunks/error-handler-df8dffd6.js – 200; mime: text/javascript
+07-04 18:28:54.310 19978 20012 I flutter : GET _app/immutable/components/pages/auth/_page.svelte-90066a89.js – 200; mime: text/javascript
+07-04 18:28:54.317 19978 20012 I flutter : GET _app/immutable/chunks/fa-33dddbd3.js – 200; mime: text/javascript
+07-04 18:28:54.325 19978 20012 I flutter : GET _app/immutable/chunks/index-be8ea2fc.js – 200; mime: text/javascript
+07-04 18:28:54.332 19978 20012 I flutter : GET _app/immutable/start-31285994.js – 200; mime: text/javascript
+07-04 18:28:54.339 19978 20012 I flutter : GET _app/immutable/chunks/merged-header-icon-5b1d438d.js – 200; mime: text/javascript
+07-04 18:28:54.345 19978 20012 I flutter : GET _app/immutable/components/pages/manage/_page.svelte-788e593b.js – 200; mime: text/javascript
+07-04 18:28:54.352 19978 20012 I flutter : GET _app/immutable/components/pages/_layout.svelte-9a3342ae.js – 200; mime: text/javascript
+07-04 18:28:54.364 19978 20012 I flutter : GET _app/immutable/components/pages/b/_page.svelte-f75ac4b0.js – 200; mime: text/javascript
+07-04 18:28:54.371 19978 20012 I flutter : GET _app/immutable/chunks/store-fb60485f.js – 200; mime: text/javascript
+07-04 18:28:54.376 19978 20012 I flutter : GET _app/immutable/components/pages/settings/_page.svelte-2a445305.js – 200; mime: text/javascript
+07-04 18:28:54.384 19978 20012 I flutter : GET apple-touch-icon.png – 200; mime: image/png
+07-04 18:28:54.395 19978 20012 I flutter : GET favicon.png – 200; mime: image/png
+07-04 18:28:54.399 19978 20012 I flutter : GET favicon.ico – 200; mime: image/x-icon
+07-04 18:28:54.532 19978 20012 I flutter : GET fonts/genEiKoburiMin5.ttf – 200; mime: application/x-font-ttf
+07-04 18:28:54.543 19978 20012 I flutter : GET fonts/klee-one-v7-600.woff – 200; mime: application/x-font-woff
+07-04 18:28:54.563 19978 20012 I flutter : GET fonts/klee-one-v7-600.woff2 – 200; mime: font/woff2
+07-04 18:28:54.625 19978 20012 I flutter : GET fonts/klee-one-v7-regular.woff – 200; mime: application/x-font-woff
+07-04 18:28:54.653 19978 20012 I flutter : GET fonts/klee-one-v7-regular.woff2 – 200; mime: font/woff2
+07-04 18:28:54.710 19978 20012 I flutter : GET fonts/noto-sans-v42-500.woff – 200; mime: application/x-font-woff
+07-04 18:28:54.726 19978 20012 I flutter : GET fonts/noto-sans-v42-500.woff2 – 200; mime: font/woff2
+07-04 18:28:54.753 19978 20012 I flutter : GET fonts/noto-sans-v42-700.woff – 200; mime: application/x-font-woff
+07-04 18:28:54.766 19978 20012 I flutter : GET fonts/noto-sans-v42-700.woff2 – 200; mime: font/woff2
+07-04 18:28:54.783 19978 20012 I flutter : GET fonts/noto-sans-v42-regular.woff – 200; mime: application/x-font-woff
+07-04 18:28:54.809 19978 20012 I flutter : GET fonts/noto-sans-v42-regular.woff2 – 200; mime: font/woff2
+07-04 18:28:54.835 19978 20012 I flutter : GET fonts/noto-serif-v21-500.woff – 200; mime: application/x-font-woff
+07-04 18:28:54.860 19978 20012 I flutter : GET fonts/noto-serif-v21-500.woff2 – 200; mime: font/woff2
+07-04 18:28:54.880 19978 20012 I flutter : GET fonts/noto-serif-v21-700.woff – 200; mime: application/x-font-woff
+07-04 18:28:54.916 19978 20012 I flutter : GET fonts/noto-serif-v21-700.woff2 – 200; mime: font/woff2
+07-04 18:28:54.936 19978 20012 I flutter : GET fonts/noto-serif-v21-regular.woff – 200; mime: application/x-font-woff
+07-04 18:28:54.966 19978 20012 I flutter : GET fonts/noto-serif-v21-regular.woff2 – 200; mime: font/woff2
+07-04 18:28:54.995 19978 20012 I flutter : GET fonts/shippori-mincho-v14-500.woff – 200; mime: application/x-font-woff
+07-04 18:28:55.059 19978 20012 I flutter : GET fonts/shippori-mincho-v14-500.woff2 – 200; mime: font/woff2
+07-04 18:28:55.128 19978 20012 I flutter : GET fonts/shippori-mincho-v14-700.woff – 200; mime: application/x-font-woff
+07-04 18:28:55.152 19978 20012 I flutter : GET fonts/shippori-mincho-v14-700.woff2 – 200; mime: font/woff2
+07-04 18:28:55.164 19978 20012 I flutter : GET fonts/shippori-mincho-v14-regular.woff – 200; mime: application/x-font-woff
+07-04 18:28:55.189 19978 20012 I flutter : GET fonts/shippori-mincho-v14-regular.woff2 – 200; mime: font/woff2
+07-04 18:28:55.198 19978 20012 I flutter : GET icons/maskable-icon@128x128.png – 200; mime: image/png
+07-04 18:28:55.213 19978 20012 I flutter : GET icons/maskable-icon@16x16.png – 200; mime: image/png
+07-04 18:28:55.223 19978 20012 I flutter : GET icons/maskable-icon@192x192.png – 200; mime: image/png
+07-04 18:28:55.230 19978 20012 I flutter : GET icons/maskable-icon@32x32.png – 200; mime: image/png
+07-04 18:28:55.242 19978 20012 I flutter : GET icons/regular-icon@16x16.png – 200; mime: image/png
+07-04 18:28:55.247 19978 20012 I flutter : GET icons/maskable-icon@512x512.png – 200; mime: image/png
+07-04 18:28:55.255 19978 20012 I flutter : GET icons/regular-icon@192x192.png – 200; mime: image/png
+07-04 18:28:55.261 19978 20012 I flutter : GET icons/regular-icon@32x32.png – 200; mime: image/png
+07-04 18:28:55.268 19978 20012 I flutter : GET icons/regular-icon@512x512.png – 200; mime: image/png
+07-04 18:28:55.278 19978 20012 I flutter : GET manifest.webmanifest – 200; mime: application/manifest+json
+07-04 18:28:55.282 19978 20012 I flutter : GET safari-pinned-tab.svg – 200; mime: image/svg+xml
+07-04 18:28:55.288 19978 20012 I flutter : GET index.html – 200; mime: text/html
+07-04 18:28:55.298 19978 20012 I flutter : GET __data.json – 200; mime: application/json
+07-04 18:28:55.302 19978 20012 I flutter : GET auth.html – 200; mime: text/html
+07-04 18:28:55.309 19978 20012 I flutter : GET auth/__data.json – 200; mime: application/json
+07-04 18:28:55.320 19978 20012 I flutter : GET b.html – 200; mime: text/html
+07-04 18:28:55.323 19978 20012 I flutter : GET b/__data.json – 200; mime: application/json
+07-04 18:28:55.331 19978 20012 I flutter : GET manage.html – 200; mime: text/html
+07-04 18:28:55.341 19978 20012 I flutter : GET manage/__data.json – 200; mime: application/json
+07-04 18:28:55.347 19978 20012 I flutter : GET settings.html – 200; mime: text/html
+07-04 18:28:55.354 19978 20012 I flutter : GET settings/__data.json – 200; mime: application/json
+07-04 18:30:08.602 19978 20012 I flutter : [JellyfinLibrary] Loading library...
+07-04 18:30:08.603 19978 20012 I flutter : [JellyfinLibrary] Not logged in, restoring session...
+07-04 18:30:08.604 19978 20012 I flutter : [JellyfinLibrary] ❌ Load error: LateInitializationError: Field '_preferences@165519058' has not been initialized.
+07-04 18:32:47.884 21965 22025 I flutter : The Dart VM service is listening on http://127.0.0.1:34951/JkIMKrJ11Rg=/
+07-04 18:32:50.656 21965 22007 I flutter : media_kit: WARNING: package:media_kit_native_event_loop not found.
+07-04 18:32:50.805 21965 22007 I flutter : flutter_logs: Logs Configuration added.
+07-04 18:32:52.817 21965 22007 I flutter : ╔══════════════════════════════════════════════════════╗
+07-04 18:32:52.818 21965 22007 I flutter : ║                 ISAR CONNECT STARTED                 ║
+07-04 18:32:52.818 21965 22007 I flutter : ╟──────────────────────────────────────────────────────╢
+07-04 18:32:52.818 21965 22007 I flutter : ║         Open the link to connect to the Isar         ║
+07-04 18:32:52.819 21965 22007 I flutter : ║        Inspector while this build is running.        ║
+07-04 18:32:52.819 21965 22007 I flutter : ╟──────────────────────────────────────────────────────╢
+07-04 18:32:52.819 21965 22007 I flutter : ║ https://inspect.isar.dev/3.1.0+1/#/34951/JkIMKrJ11Rg ║
+07-04 18:32:52.820 21965 22007 I flutter : ╚══════════════════════════════════════════════════════╝
+07-04 18:32:53.401 21965 22055 I flutter : ╔══════════════════════════════════════════════════════╗
+07-04 18:32:53.401 21965 22055 I flutter : ║                 ISAR CONNECT STARTED                 ║
+07-04 18:32:53.401 21965 22055 I flutter : ╟──────────────────────────────────────────────────────╢
+07-04 18:32:53.402 21965 22055 I flutter : ║         Open the link to connect to the Isar         ║
+07-04 18:32:53.402 21965 22055 I flutter : ║        Inspector while this build is running.        ║
+07-04 18:32:53.402 21965 22055 I flutter : ╟──────────────────────────────────────────────────────╢
+07-04 18:32:53.402 21965 22055 I flutter : ║ https://inspect.isar.dev/3.1.0+1/#/34951/JkIMKrJ11Rg ║
+07-04 18:32:53.402 21965 22055 I flutter : ╚══════════════════════════════════════════════════════╝
+07-04 18:32:56.420 21965 22056 I flutter : ╔══════════════════════════════════════════════════════╗
+07-04 18:32:56.421 21965 22056 I flutter : ║                 ISAR CONNECT STARTED                 ║
+07-04 18:32:56.421 21965 22056 I flutter : ╟──────────────────────────────────────────────────────╢
+07-04 18:32:56.421 21965 22056 I flutter : ║         Open the link to connect to the Isar         ║
+07-04 18:32:56.421 21965 22056 I flutter : ║        Inspector while this build is running.        ║
+07-04 18:32:56.421 21965 22056 I flutter : ╟──────────────────────────────────────────────────────╢
+07-04 18:32:56.421 21965 22056 I flutter : ║ https://inspect.isar.dev/3.1.0+1/#/34951/JkIMKrJ11Rg ║
+07-04 18:32:56.421 21965 22056 I flutter : ╚══════════════════════════════════════════════════════╝
+07-04 18:32:56.578 21965 22007 I flutter : {"fromPackageName":null,"fromSignatures":null,"action":"android.intent.action.MAIN","data":null,"categories":["android.intent.category.LAUNCHER"],"extra":null}
+07-04 18:32:56.584 21965 22007 I flutter : NowPlaying is part of app.arianneorpilla.yuuna
+07-04 18:32:56.634 21965 22055 I flutter : ╔══════════════════════════════════════════════════════╗
+07-04 18:32:56.634 21965 22055 I flutter : ║                 ISAR CONNECT STARTED                 ║
+07-04 18:32:56.635 21965 22055 I flutter : ╟──────────────────────────────────────────────────────╢
+07-04 18:32:56.635 21965 22055 I flutter : ║         Open the link to connect to the Isar         ║
+07-04 18:32:56.635 21965 22055 I flutter : ║        Inspector while this build is running.        ║
+07-04 18:32:56.635 21965 22055 I flutter : ╟──────────────────────────────────────────────────────╢
+07-04 18:32:56.635 21965 22055 I flutter : ║ https://inspect.isar.dev/3.1.0+1/#/34951/JkIMKrJ11Rg ║
+07-04 18:32:56.636 21965 22055 I flutter : ╚══════════════════════════════════════════════════════╝
+07-04 18:32:57.996 21965 22007 I flutter : [JellyfinLibrary] Loading library...
+07-04 18:32:57.999 21965 22007 I flutter : [JellyfinLibrary] Not logged in, restoring session...
+07-04 18:32:59.680 21965 22007 I flutter : [JellyfinLibrary] ❌ Load error: LateInitializationError: Field '_preferences@165519058' has not been initialized.
+07-04 18:33:03.250 21965 22007 I flutter : GET index.html – 200; mime: text/html
+07-04 18:33:04.653 21965 22007 I flutter : GET service-worker.js – 200; mime: text/javascript
