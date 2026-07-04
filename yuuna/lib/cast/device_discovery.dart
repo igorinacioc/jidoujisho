@@ -9,11 +9,13 @@ import 'multicast_lock.dart';
 class DeviceDiscovery {
   static const _multicastAddress = '239.255.255.250';
   static const _multicastPort = 1900;
-  static const _ssdpTimeout = Duration(seconds: 4);
-  static const _mdnsTimeout = Duration(seconds: 5);
+  static const _ssdpTimeout = Duration(seconds: 8);
+  static const _mdnsTimeout = Duration(seconds: 8);
   static const _searchTargets = [
     'urn:dial-multiscreen-org:service:dial:1',
     'urn:schemas-upnp-org:device:MediaRenderer:1',
+    'urn:schemas-upnp-org:device:MediaServer:1',
+    'ssdp:all',
   ];
   final SessionApi _sessionApi;
   DeviceDiscovery(this._sessionApi);
@@ -70,7 +72,8 @@ class DeviceDiscovery {
     final h = _parseHeaders(r);
     final loc = h['location'] ?? '', srv = (h['server'] ?? '').toLowerCase(), usn = h['usn'] ?? '', st = h['st'] ?? '';
     String t; CastDeviceIcon i;
-    if (st.contains('dial') || srv.contains('chromecast')) { t = 'Google Cast'; i = CastDeviceIcon.cast; }
+    if (st.contains('dial') || srv.contains('chromecast') || srv.contains('google cast')) { t = 'Google Cast'; i = CastDeviceIcon.cast; }
+    else if (srv.contains('amazon') || srv.contains('fire') || srv.contains('aft')) { t = 'Fire TV'; i = CastDeviceIcon.tv; }
     else if (srv.contains('roku')) { t = 'Roku'; i = CastDeviceIcon.tv; }
     else if (srv.contains('fire') || srv.contains('amazon')) { t = 'Fire TV'; i = CastDeviceIcon.tv; }
     else if (srv.contains('samsung') || srv.contains('tizen')) { t = 'Samsung TV'; i = CastDeviceIcon.tv; }
@@ -79,7 +82,7 @@ class DeviceDiscovery {
     else if (srv.contains('xbox')) { t = 'Xbox'; i = CastDeviceIcon.game; }
     else if (srv.contains('playstation') || srv.contains('ps4') || srv.contains('ps5')) { t = 'PlayStation'; i = CastDeviceIcon.game; }
     else { t = 'Smart TV / Cast Device'; i = CastDeviceIcon.tv; }
-    return DiscoveredDevice(name: _dn(srv, usn, ip), type: t, iconType: i, ip: ip, locationUrl: loc.isNotEmpty ? loc : null, serverInfo: srv.isNotEmpty ? srv : null);
+    return DiscoveredDevice(name: _dn(srv, usn, ip), type: t, iconType: i, ip: ip, locationUrl: loc.isNotEmpty ? loc : null, serverInfo: srv.isNotEmpty ? srv : null, isChromecast: t == 'Google Cast');
   }
 
   Map<String, String> _parseHeaders(String r) {
@@ -107,7 +110,8 @@ class DeviceDiscovery {
 
   bool _isCastDevice(ServerDevice d) {
     final a = d.appName?.toLowerCase() ?? '', n = d.name.toLowerCase();
-    for (final w in ['web','browser','mobile','html','desktop','phone','tablet']) { if (a.contains(w)||n.contains(w)) return false; }
+    // Exclude: web/mobile clients, and ourselves (Yuuna/jidoujisho).
+    for (final w in ['web','browser','mobile','html','desktop','phone','tablet','yuuna','jidoujisho']) { if (a.contains(w)||n.contains(w)) return false; }
     for (final p in ['chromecast','android tv','google tv','fire tv','firestick','amazon','samsung','tizen','lg tv','webos','roku','apple tv','shield','xbox','playstation','ps4','ps5','tv','television','cast','dlna','raspberry','kodi','plex']) { if (a.contains(p)||n.contains(p)) return true; }
     return a.isNotEmpty && a != 'unknown' && a != 'android' && a != 'ios';
   }

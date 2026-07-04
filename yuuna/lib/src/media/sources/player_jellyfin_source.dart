@@ -536,6 +536,65 @@ class PlayerJellyfinSource extends PlayerMediaSource {
     }
   }
 
+  // ─── Image / Audio Generation (Mining) ──────────────────────────────────
+
+  /// Override to use the Jellyfin stream URL instead of the item ID as
+  /// FFmpeg's input. The base class uses [MediaItem.mediaIdentifier] which
+  /// is the Jellyfin server-side item ID — FFmpeg can't read that.
+  @override
+  Future<List<NetworkToFileImage>> generateImages({
+    required AppModel appModel,
+    required MediaItem item,
+    List<Subtitle>? subtitles,
+    SubtitleOptions? options,
+  }) async {
+    // Swap item.mediaIdentifier with the actual stream URL for FFmpeg.
+    final extra = jsonDecode(item.extra ?? '{}') as Map<String, dynamic>;
+    final msId = extra['mediaSourceId'] as String? ?? '';
+    if (msId.isNotEmpty && _client != null) {
+      final streamUrl = _client!.playbackApi.getStreamUrl(
+        item.mediaIdentifier, msId,
+      );
+      // Temporarily use the stream URL as the media identifier.
+      final modifiedItem = item.copyWith(mediaIdentifier: streamUrl);
+      return super.generateImages(
+        appModel: appModel, item: modifiedItem,
+        subtitles: subtitles, options: options,
+      );
+    }
+    return super.generateImages(
+      appModel: appModel, item: item,
+      subtitles: subtitles, options: options,
+    );
+  }
+
+  /// Same fix as [generateImages] — use stream URL for FFmpeg audio extraction.
+  @override
+  Future<File?>? generateAudio({
+    required AppModel appModel,
+    required MediaItem item,
+    List<Subtitle>? subtitles,
+    SubtitleOptions? options,
+    String? data,
+  }) async {
+    final extra = jsonDecode(item.extra ?? '{}') as Map<String, dynamic>;
+    final msId = extra['mediaSourceId'] as String? ?? '';
+    if (msId.isNotEmpty && _client != null) {
+      final streamUrl = _client!.playbackApi.getStreamUrl(
+        item.mediaIdentifier, msId,
+      );
+      final modifiedItem = item.copyWith(mediaIdentifier: streamUrl);
+      return super.generateAudio(
+        appModel: appModel, item: modifiedItem,
+        subtitles: subtitles, options: options, data: data,
+      );
+    }
+    return super.generateAudio(
+      appModel: appModel, item: item,
+      subtitles: subtitles, options: options, data: data,
+    );
+  }
+
   // ─── Cleanup ───────────────────────────────────────────────────────────
 
   void cleanup() {
