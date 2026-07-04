@@ -351,6 +351,14 @@ class _PlayerSourcePageState extends BaseSourcePageState<PlayerSourcePage>
     _subtitleItems = futures.elementAt(1) as List<SubtitleItem>;
     debugPrint('[Player] Backend: ${_playerController.backendType}');
     debugPrint('[Player] Subtitle items loaded: ${_subtitleItems.length}');
+
+    // Seed duration from known metadata so the progress slider is usable
+    // immediately. VLC takes time to parse duration from network streams.
+    // The listener will overwrite with the real VLC duration once available.
+    if (_playerController.duration == Duration.zero && widget.item!.duration > 0) {
+      _durationNotifier.value = Duration(seconds: widget.item!.duration);
+      debugPrint('[Player] Seeded duration from metadata: ${widget.item!.duration}s');
+    }
     _transcriptBackgroundNotifier.value = appModel.isTranscriptOpaque;
 
     if (source is PlayerLocalMediaSource) {
@@ -481,7 +489,9 @@ class _PlayerSourcePageState extends BaseSourcePageState<PlayerSourcePage>
 
         Future.delayed(const Duration(seconds: 5), () {
           try {
-            appModel.blockCreatorInitialMedia = false;
+            if (mounted) {
+              appModel.blockCreatorInitialMedia = false;
+            }
           } catch (e) {
             debugPrint('[Player] Error in delayed init: $e');
           }

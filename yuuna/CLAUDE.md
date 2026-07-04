@@ -630,4 +630,53 @@ Registrado em `.mcp.json`. Precisa aprovar na primeira execução.
 | `list_devices` | Listar dispositivos |
 | `launch_app` | Iniciar app |
 | `open_app` | Abrir app via agent-device |
-| `force_stop` | Forçar parada |
+
+---
+
+## 📋 PENDENTE: Plano de Migração Cast TV → `media_cast_dlna`
+
+**Data:** 2026-07-04 | **Branch:** `ffmpeg-kit-migration`
+
+### Problema atual
+Nossa implementação de Cast TV usa SSDP/mDNS raw sockets manuais. Funciona parcialmente:
+- Acha dispositivo `linux` (Google Cast) via SSDP mas não conecta (roteado pra DLNA em vez de Chromecast)
+- Não acha Smart TVs (Samsung, LG) nem Firestick
+- CORS proxy + CastV2 complexos e frágeis
+
+### Pacote candidato: `media_cast_dlna` v0.3.1
+- Usa **jUPnP** (biblioteca Java madura) no Android — stack UPnP/DLNA completo
+- Descoberta event-driven com `upnp:rootdevice` (muito mais abrangente)
+- Suporte a legendas DLNA (Samsung: `sec:CaptionInfo`)
+- Android apenas (API 21+)
+
+### O que seria substituído
+| Arquivo | Substituído por |
+|---------|----------------|
+| `device_discovery.dart` (SSDP) | `media_cast_dlna` discovery |
+| `dlna_controller.dart` | `media_cast_dlna` playback API |
+| `multicast_lock.dart` | Interno do plugin (já trata) |
+
+### O que seria MANTIDO
+| Arquivo | Motivo |
+|---------|--------|
+| `chromecast_discovery.dart` | mDNS — plugin não cobre |
+| `castv2_protocol.dart` | CastV2 — plugin não cobre |
+| `chromecast_controller.dart` | Chromecast direto |
+| `cast_controller.dart` | Jellyfin cast (SessionApi) |
+| `device_picker.dart` | UI — só ajustar modelo |
+
+### Passos da migração
+1. Adicionar `media_cast_dlna: ^0.3.1` no pubspec.yaml
+2. Adicionar service `org.jupnp.android.AndroidUpnpServiceImpl` no AndroidManifest
+3. Criar `DlnaDiscoveryService` usando `MediaCastDlnaApi.startDiscovery()`
+4. Substituir `DlnaController` pela API `setMediaUri()`/`play()`/`pause()`/`seek()`
+5. Atualizar `CastTarget` com `DlnaDevice` do plugin
+6. Testar com TV Samsung/LG e Firestick reais
+
+### ⚠️ Build pendente — PATCHES JÁ APLICADOS (não buildados)
+Estes fixes estão no código mas **não foram buildados**:
+- `player_source_page.dart`: seed de `_durationNotifier` com metadata (resolve seek quebrado)
+- `device_discovery.dart`: timeout 8s, +search targets, detecta "Google Cast", filtra Yuuna
+- `player_jellyfin_source.dart`: overrides `generateImages`/`generateAudio` com stream URL
+
+**Próximo passo:** `flutter build apk --debug && adb install -r`
