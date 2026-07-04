@@ -1,12 +1,15 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_vlc_player/flutter_vlc_player.dart';
 import 'package:material_floating_search_bar/material_floating_search_bar.dart';
 import 'package:server_core/server_core.dart' as server_core;
+import 'package:network_to_file_image/network_to_file_image.dart';
 import 'package:server_jellyfin/server_jellyfin.dart' as server_jellyfin;
+import 'package:subtitle/subtitle.dart';
 import 'package:yuuna/cast/cast.dart';
 import 'package:yuuna/media.dart';
 import 'package:yuuna/models.dart';
@@ -547,28 +550,26 @@ class PlayerJellyfinSource extends PlayerMediaSource {
     required MediaItem item,
     List<Subtitle>? subtitles,
     SubtitleOptions? options,
+    String? data,
   }) async {
-    // Swap item.mediaIdentifier with the actual stream URL for FFmpeg.
     final extra = jsonDecode(item.extra ?? '{}') as Map<String, dynamic>;
     final msId = extra['mediaSourceId'] as String? ?? '';
     if (msId.isNotEmpty && _client != null) {
       final streamUrl = _client!.playbackApi.getStreamUrl(
         item.mediaIdentifier, msId,
       );
-      // Temporarily use the stream URL as the media identifier.
       final modifiedItem = item.copyWith(mediaIdentifier: streamUrl);
       return super.generateImages(
         appModel: appModel, item: modifiedItem,
-        subtitles: subtitles, options: options,
+        subtitles: subtitles, options: options, data: data,
       );
     }
     return super.generateImages(
       appModel: appModel, item: item,
-      subtitles: subtitles, options: options,
+      subtitles: subtitles, options: options, data: data,
     );
   }
 
-  /// Same fix as [generateImages] — use stream URL for FFmpeg audio extraction.
   @override
   Future<File?>? generateAudio({
     required AppModel appModel,
