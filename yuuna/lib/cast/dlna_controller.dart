@@ -73,11 +73,11 @@ class DlnaController extends CastSession {
       }
       if (controlUrl == null) return null;
 
-      // 2. Send SetAVTransportURI.
+      // 2. Send SetAVTransportURI (use CDATA to avoid XML-entity-corrupted URLs).
       final setUriBody = _buildSoapEnvelope(
         'SetAVTransportURI',
         '<InstanceID>0</InstanceID>'
-            '<CurrentURI>${_escapeXml(streamUrl)}</CurrentURI>'
+            '<CurrentURI><![CDATA[$streamUrl]]></CurrentURI>'
             '<CurrentURIMetaData></CurrentURIMetaData>',
       );
       final uriResponse = await http
@@ -306,15 +306,6 @@ class DlnaController extends CastSession {
         'Content-Type': 'text/xml; charset="utf-8"',
         'SOAPACTION': '"urn:schemas-upnp-org:service:AVTransport:1#$action"',
       };
-
-  static String _escapeXml(String s) {
-    return s
-        .replaceAll('&', '&amp;')
-        .replaceAll('<', '&lt;')
-        .replaceAll('>', '&gt;')
-        .replaceAll('"', '&quot;')
-        .replaceAll("'", '&apos;');
-  }
 
   static Duration _parseDuration(String hhmmss) {
     final parts = hhmmss.split(':');

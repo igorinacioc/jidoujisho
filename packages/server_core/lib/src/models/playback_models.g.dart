@@ -24,7 +24,7 @@ _$MediaItemImpl _$$MediaItemImplFromJson(Map<String, dynamic> json) =>
       runTimeTicks: (json['runTimeTicks'] as num?)?.toInt(),
       productionYear: (json['productionYear'] as num?)?.toInt(),
       indexNumber: (json['indexNumber'] as num?)?.toInt(),
-      parentIndexNumber: json['parentIndexNumber'] as String?,
+      parentIndexNumber: (json['parentIndexNumber'] as num?)?.toInt(),
       seriesId: json['seriesId'] as String?,
       seriesName: json['seriesName'] as String?,
       seasonName: json['seasonName'] as String?,

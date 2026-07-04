@@ -35,7 +35,7 @@ class MediaItem with _$MediaItem {
     int? indexNumber,
 
     /// Season number (for episodes).
-    String? parentIndexNumber,
+    int? parentIndexNumber,
 
     /// The parent series ID (for seasons and episodes).
     String? seriesId,

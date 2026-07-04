@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_vlc_player/flutter_vlc_player.dart';
 import 'package:material_floating_search_bar/material_floating_search_bar.dart';
 import 'package:server_core/server_core.dart' as server_core;
 import 'package:server_jellyfin/server_jellyfin.dart' as server_jellyfin;
@@ -48,10 +49,17 @@ class PlayerJellyfinSource extends PlayerMediaSource {
   // ─── Connection Management ─────────────────────────────────────────────
 
   Future<bool> restoreSession() async {
+    // Ensure the source is initialised before accessing preferences.
+    await initialise();
+
     final url = getPreference<String?>(key: 'jellyfin_server_url', defaultValue: null);
     final token = getPreference<String?>(key: 'jellyfin_access_token', defaultValue: null);
     final uid = getPreference<String?>(key: 'jellyfin_user_id', defaultValue: null);
-    if (url == null || token == null || uid == null) return false;
+    debugPrint('[Jellyfin] restoreSession: url=$url token=${token != null ? "yes" : "no"} uid=$uid');
+    if (url == null || token == null || uid == null) {
+      debugPrint('[Jellyfin] restoreSession: missing credentials');
+      return false;
+    }
 
     _client = server_jellyfin.JellyfinMediaServerClient(
       baseUrl: url,
@@ -61,26 +69,31 @@ class PlayerJellyfinSource extends PlayerMediaSource {
     );
     try {
       await _client!.itemsApi.getViews();
+      debugPrint('[Jellyfin] ✅ Session restored to $url');
       return true;
-    } catch (_) {
+    } catch (e) {
+      debugPrint('[Jellyfin] ❌ Session restore failed: $e');
       _client = null;
       return false;
     }
   }
 
   Future<bool> connectToServer(String url, String username, String password) async {
+    debugPrint('[Jellyfin] connectToServer: $url ($username)');
     _client = server_jellyfin.JellyfinMediaServerClient(
       baseUrl: url,
       deviceInfo: _deviceInfo,
     );
     try {
       final r = await _client!.authApi.authenticateByName(username, password);
+      debugPrint('[Jellyfin] ✅ Auth success: userId=${r.userId}');
       _client!.setCredentials(accessToken: r.accessToken, userId: r.userId);
       await setPreference<String?>(key: 'jellyfin_server_url', value: url);
       await setPreference<String?>(key: 'jellyfin_access_token', value: r.accessToken);
       await setPreference<String?>(key: 'jellyfin_user_id', value: r.userId);
       return true;
-    } catch (_) {
+    } catch (e) {
+      debugPrint('[Jellyfin] ❌ Auth failed: $e');
       _client = null;
       rethrow;
     }
@@ -120,19 +133,28 @@ class PlayerJellyfinSource extends PlayerMediaSource {
     String? seriesId,
   }) async {
     final cacheKey = '$parentId-$parentType-$seriesId';
-    if (_browseCache.containsKey(cacheKey)) return _browseCache[cacheKey]!;
+    if (_browseCache.containsKey(cacheKey)) {
+      debugPrint('[Jellyfin] getItems CACHE HIT: $cacheKey (${_browseCache[cacheKey]!.length} items)');
+      return _browseCache[cacheKey]!;
+    }
+
+    debugPrint('[Jellyfin] getItems: parentId=$parentId parentType=$parentType seriesId=$seriesId');
 
     List<server_core.MediaItem> items;
     final pt = parentType?.toLowerCase();
     if ((pt == 'series') && seriesId != null) {
-      // Get seasons for a TV series.
+      debugPrint('[Jellyfin] → getSeasons(seriesId=$seriesId)');
       items = await _c.itemsApi.getSeasons(seriesId);
     } else if ((pt == 'season') && seriesId != null) {
-      // Get episodes for a TV season.
+      debugPrint('[Jellyfin] → getEpisodes(seriesId=$seriesId, seasonId=$parentId)');
       items = await _c.itemsApi.getEpisodes(seriesId, parentId);
     } else {
-      // Generic: folders, views, mixed libraries.
+      debugPrint('[Jellyfin] → getItems(parentId=$parentId, recursive=${parentType == null})');
       items = await _c.itemsApi.getItems(parentId, recursive: parentType == null);
+    }
+    debugPrint('[Jellyfin] getItems RESULT: ${items.length} items');
+    for (final i in items) {
+      debugPrint('[Jellyfin]   - "${i.name}" type=${i.type} isFolder=${i.isFolder}');
     }
     _browseCache[cacheKey] = items;
     for (final i in items) { _itemCache[i.id] = i; }
@@ -166,7 +188,7 @@ class PlayerJellyfinSource extends PlayerMediaSource {
         'seriesName': item.seriesName ?? '',
         'seasonName': item.seasonName ?? '',
         'episodeLabel': item.indexNumber != null && item.parentIndexNumber != null
-            ? 'S${item.parentIndexNumber!.padLeft(2, '0')}E${item.indexNumber.toString().padLeft(2, '0')}'
+            ? 'S${item.parentIndexNumber.toString().padLeft(2, '0')}E${item.indexNumber.toString().padLeft(2, '0')}'
             : '',
         'itemType': item.type ?? '',
         'productionYear': item.productionYear?.toString() ?? '',
@@ -209,21 +231,26 @@ class PlayerJellyfinSource extends PlayerMediaSource {
     }
     if (msId.isEmpty) throw Exception('No media source available.');
 
-    // Use media_kit for Jellyfin streaming.
-    final service = MediaKitPlayerService(_c.playbackApi);
+    // Use VLC for Jellyfin streaming (same backend as other media sources).
+    final streamUrl = _c.playbackApi.getStreamUrl(item.mediaIdentifier, msId);
+
     // Cap start time to avoid seeking to the very end (e.g. if Jellyfin
     // reports the item as fully watched via PlaybackPositionTicks = RunTimeTicks).
     final duration = item.duration > 0 ? item.duration : 0;
     final startTime = item.position < duration - 10 ? item.position : 0;
-    final (:player, :videoController) = await service.createPlayer(
-      itemId: item.mediaIdentifier,
-      mediaSourceId: msId,
-      startTime: startTime,
+
+    final vlc = VlcPlayerController.network(
+      streamUrl,
+      hwAcc: appModel.playerHardwareAcceleration ? HwAcc.auto : HwAcc.disabled,
+      allowBackgroundPlayback: appModel.playerBackgroundPlay,
+      options: VlcPlayerOptions(
+        advanced: VlcAdvancedOptions([
+          '--start-time=$startTime',
+          VlcAdvancedOptions.networkCaching(20000),
+        ]),
+      ),
     );
-    return UniversalPlayerController.mediaKit(
-      player: player,
-      videoController: videoController,
-    );
+    return UniversalPlayerController.vlc(vlc);
   }
 
   @override
@@ -237,28 +264,41 @@ class PlayerJellyfinSource extends PlayerMediaSource {
 
     try {
       final jItem = await getItemDetails(item.mediaIdentifier);
-      if (jItem.mediaStreams.isEmpty) return [];
+      debugPrint('[Jellyfin] prepareSubtitles: item=${item.mediaIdentifier}, '
+          'total streams=${jItem.mediaStreams.length}, msId=$msId');
+
+      final subtitleStreams = jItem.mediaStreams
+          .where((s) => s.type == 'Subtitle')
+          .toList();
+      debugPrint('[Jellyfin] Found ${subtitleStreams.length} subtitle streams');
+
+      if (subtitleStreams.isEmpty) {
+        debugPrint('[Jellyfin] No subtitle streams — returning empty.');
+        return [];
+      }
       if (msId.isEmpty) msId = jItem.mediaSources.isNotEmpty ? jItem.mediaSources.first.id : '';
+      if (msId.isEmpty) {
+        debugPrint('[Jellyfin] No media source ID — returning empty.');
+        return [];
+      }
 
       final service = SubtitleService(
         (iid, sid, idx) => _c.playbackApi.getSubtitleContent(iid, sid, idx),
       );
       return service.loadSubtitles(
         itemId: item.mediaIdentifier,
-        subtitleStreams: jItem.mediaStreams
-            .where((s) => s.type == 'Subtitle')
-            .map((s) => SubtitleStreamMeta(
-                  index: s.index,
-                  codec: s.codec,
-                  displayTitle: s.displayTitle,
-                  language: s.language,
-                  isExternal: s.isExternal ?? false,
-                  deliveryUrl: s.deliveryUrl,
-                ))
-            .toList(),
+        subtitleStreams: subtitleStreams.map((s) => SubtitleStreamMeta(
+              index: s.index,
+              codec: s.codec,
+              displayTitle: s.displayTitle,
+              language: s.language,
+              isExternal: s.isExternal ?? false,
+              deliveryUrl: s.deliveryUrl,
+            )).toList(),
         mediaSourceId: msId,
       );
-    } catch (_) {
+    } catch (e) {
+      debugPrint('[Jellyfin] ❌ prepareSubtitles exception: $e');
       return [];
     }
   }
@@ -343,13 +383,17 @@ class PlayerJellyfinSource extends PlayerMediaSource {
     AppModel appModel,
     MediaItem item,
   ) async {
+    debugPrint('[Cast+Mine] Starting cast flow for: ${item.title}');
     try {
       final jItem = await _c.itemsApi.getItem(item.mediaIdentifier);
 
       // Discover.
+      debugPrint('[Cast+Mine] Discovering devices...');
       final discovery = DeviceDiscovery(_c.sessionApi);
       final devices = await discovery.discover();
+      debugPrint('[Cast+Mine] Found ${devices.length} cast targets');
       if (devices.isEmpty) {
+        debugPrint('[Cast+Mine] ❌ No devices found!');
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('No cast devices found.')),
@@ -388,10 +432,8 @@ class PlayerJellyfinSource extends PlayerMediaSource {
       } catch (_) {}
 
       // Chromecast (Google Cast via mDNS / CastV2 protocol).
-      // Must be checked BEFORE DLNA — Chromecasts may also respond to
-      // DIAL SSDP, which would incorrectly route them to the DLNA path.
       if (target.isChromecast) {
-        // Build a ChromecastDevice from whichever source is available.
+        debugPrint('[Cast+Mine] → Chromecast path: ${target.name}');
         final chromecastDevice = target.chromecastDevice ??
             ChromecastDevice(
               name: target.ssdpDevice?.name ?? target.name,
@@ -401,6 +443,7 @@ class PlayerJellyfinSource extends PlayerMediaSource {
             );
 
         final streamUrl = _c.playbackApi.getStreamUrl(item.mediaIdentifier, msId);
+        debugPrint('[Cast+Mine] Stream URL: $streamUrl');
         final ctrl = await ChromecastController.connect(
           device: chromecastDevice,
           streamUrl: streamUrl,
@@ -408,12 +451,14 @@ class PlayerJellyfinSource extends PlayerMediaSource {
           title: item.title ?? target.name,
         );
         if (ctrl == null) {
+          debugPrint('[Cast+Mine] ❌ Chromecast connection failed!');
           if (context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text('Chromecast connection failed.')));
           }
           return;
         }
+        debugPrint('[Cast+Mine] ✅ Chromecast connected, opening MiningModePage');
         if (!context.mounted) return;
         await Navigator.of(context).push(MaterialPageRoute(
           builder: (ctx) => MiningModePage(
@@ -427,6 +472,7 @@ class PlayerJellyfinSource extends PlayerMediaSource {
 
       // DLNA.
       if (target.isDlna && target.ssdpDevice?.locationUrl != null) {
+        debugPrint('[Cast+Mine] → DLNA path: ${target.name}');
         final streamUrl = _c.playbackApi.getStreamUrl(item.mediaIdentifier, msId);
         final ctrl = await DlnaController.connect(
           streamUrl: streamUrl,
@@ -434,6 +480,7 @@ class PlayerJellyfinSource extends PlayerMediaSource {
           deviceName: target.ssdpDevice!.name,
         );
         if (ctrl == null) {
+          debugPrint('[Cast+Mine] ❌ DLNA connection failed!');
           if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('DLNA connection failed.')));
           return;
@@ -451,10 +498,12 @@ class PlayerJellyfinSource extends PlayerMediaSource {
 
       // Jellyfin cast.
       if (!target.isJellyfin || target.jellyfinDevice == null) {
+        debugPrint('[Cast+Mine] ❌ Invalid target: not Jellyfin-compatible');
         if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Invalid cast target.')));
         return;
       }
+      debugPrint('[Cast+Mine] → Jellyfin cast path: ${target.jellyfinDevice!.name}');
       final dev = target.jellyfinDevice!;
       final controller = CastController(
         sessionApi: _c.sessionApi,
@@ -463,10 +512,12 @@ class PlayerJellyfinSource extends PlayerMediaSource {
       );
       final ok = await controller.startPlayback(itemId: item.mediaIdentifier, mediaSourceId: msId);
       if (!ok) {
+        debugPrint('[Cast+Mine] ❌ startPlayback failed for device ${dev.id}');
         if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Could not start playback on TV.')));
         return;
       }
+      debugPrint('[Cast+Mine] ✅ Jellyfin cast started, opening MiningModePage');
       await Future.delayed(const Duration(seconds: 2));
       if (!context.mounted) return;
       await Navigator.of(context).push(MaterialPageRoute(
@@ -477,6 +528,7 @@ class PlayerJellyfinSource extends PlayerMediaSource {
         ),
       ));
     } catch (e) {
+      debugPrint('[Cast+Mine] ❌ Fatal error: $e');
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Cast failed: $e')));

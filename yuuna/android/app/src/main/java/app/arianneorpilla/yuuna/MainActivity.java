@@ -9,6 +9,7 @@ import android.os.Handler;
 import android.os.Looper;
 import androidx.annotation.NonNull;
 import android.net.Uri;
+import android.net.wifi.WifiManager;
 
 import io.flutter.embedding.engine.FlutterEngine;
 import io.flutter.plugin.common.MethodChannel;
@@ -33,10 +34,12 @@ import android.content.res.Configuration;
 
 public class MainActivity extends AudioServiceActivity {
     private static final String ANKIDROID_CHANNEL = "app.arianneorpilla.yuuna/anki";
+    private static final String MULTICAST_CHANNEL = "app.arianneorpilla.yuuna/multicast";
     private static final int AD_PERM_REQUEST = 0;
 
     private Activity context;
     private AnkiDroidHelper mAnkiDroid;
+    private WifiManager.MulticastLock multicastLock;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -150,6 +153,46 @@ public class MainActivity extends AudioServiceActivity {
     @Override
     public void configureFlutterEngine(@NonNull FlutterEngine flutterEngine) {
         super.configureFlutterEngine(flutterEngine);
+
+        // ─── WiFi Multicast Lock for SSDP / mDNS discovery ─────────────────
+        new MethodChannel(flutterEngine.getDartExecutor().getBinaryMessenger(), MULTICAST_CHANNEL)
+            .setMethodCallHandler(
+                (call, result) -> {
+                    switch (call.method) {
+                        case "acquire":
+                            try {
+                                WifiManager wifi = (WifiManager) getApplicationContext()
+                                    .getSystemService(WIFI_SERVICE);
+                                if (wifi != null && (multicastLock == null || !multicastLock.isHeld())) {
+                                    multicastLock = wifi.createMulticastLock("yuuna_cast_discovery");
+                                    multicastLock.acquire();
+                                    result.success(true);
+                                } else {
+                                    result.success(false);
+                                }
+                            } catch (Exception e) {
+                                result.success(false);
+                            }
+                            break;
+                        case "release":
+                            try {
+                                if (multicastLock != null && multicastLock.isHeld()) {
+                                    multicastLock.release();
+                                }
+                                multicastLock = null;
+                                result.success(true);
+                            } catch (Exception e) {
+                                result.success(false);
+                            }
+                            break;
+                        case "isHeld":
+                            result.success(multicastLock != null && multicastLock.isHeld());
+                            break;
+                        default:
+                            result.notImplemented();
+                    }
+                }
+            );
 
         new MethodChannel(flutterEngine.getDartExecutor().getBinaryMessenger(), ANKIDROID_CHANNEL)
             .setMethodCallHandler(

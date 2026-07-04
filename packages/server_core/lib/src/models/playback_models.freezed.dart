@@ -48,7 +48,7 @@ mixin _$MediaItem {
   int? get indexNumber => throw _privateConstructorUsedError;
 
   /// Season number (for episodes).
-  String? get parentIndexNumber => throw _privateConstructorUsedError;
+  int? get parentIndexNumber => throw _privateConstructorUsedError;
 
   /// The parent series ID (for seasons and episodes).
   String? get seriesId => throw _privateConstructorUsedError;
@@ -96,7 +96,7 @@ abstract class $MediaItemCopyWith<$Res> {
       int? runTimeTicks,
       int? productionYear,
       int? indexNumber,
-      String? parentIndexNumber,
+      int? parentIndexNumber,
       String? seriesId,
       String? seriesName,
       String? seasonName,
@@ -184,7 +184,7 @@ class _$MediaItemCopyWithImpl<$Res, $Val extends MediaItem>
       parentIndexNumber: freezed == parentIndexNumber
           ? _value.parentIndexNumber
           : parentIndexNumber // ignore: cast_nullable_to_non_nullable
-              as String?,
+              as int?,
       seriesId: freezed == seriesId
           ? _value.seriesId
           : seriesId // ignore: cast_nullable_to_non_nullable
@@ -240,7 +240,7 @@ abstract class _$$MediaItemImplCopyWith<$Res>
       int? runTimeTicks,
       int? productionYear,
       int? indexNumber,
-      String? parentIndexNumber,
+      int? parentIndexNumber,
       String? seriesId,
       String? seriesName,
       String? seasonName,
@@ -326,7 +326,7 @@ class __$$MediaItemImplCopyWithImpl<$Res>
       parentIndexNumber: freezed == parentIndexNumber
           ? _value.parentIndexNumber
           : parentIndexNumber // ignore: cast_nullable_to_non_nullable
-              as String?,
+              as int?,
       seriesId: freezed == seriesId
           ? _value.seriesId
           : seriesId // ignore: cast_nullable_to_non_nullable
@@ -450,7 +450,7 @@ class _$MediaItemImpl implements _MediaItem {
 
   /// Season number (for episodes).
   @override
-  final String? parentIndexNumber;
+  final int? parentIndexNumber;
 
   /// The parent series ID (for seasons and episodes).
   @override
@@ -606,7 +606,7 @@ abstract class _MediaItem implements MediaItem {
       final int? runTimeTicks,
       final int? productionYear,
       final int? indexNumber,
-      final String? parentIndexNumber,
+      final int? parentIndexNumber,
       final String? seriesId,
       final String? seriesName,
       final String? seasonName,
@@ -658,7 +658,7 @@ abstract class _MediaItem implements MediaItem {
   @override
 
   /// Season number (for episodes).
-  String? get parentIndexNumber;
+  int? get parentIndexNumber;
   @override
 
   /// The parent series ID (for seasons and episodes).

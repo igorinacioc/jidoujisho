@@ -19,6 +19,7 @@ class CastV2Connection {
 
   SecureSocket? _socket;
   Completer<void>? _ready;
+  Completer<bool>? _loadComplete;
   int _requestId = 1;
 
   Timer? _heartbeatTimer;
@@ -180,6 +181,8 @@ class CastV2Connection {
       }
 
       final loadRequestId = _nextRequestId();
+      _loadComplete = Completer<bool>();
+
       await _sendJson(
         namespace: 'urn:x-cast:com.google.cast.media',
         payload: {
@@ -189,6 +192,20 @@ class CastV2Connection {
           'media': media,
         },
       );
+
+      // Wait for MEDIA_STATUS confirmation (or timeout after 10s).
+      try {
+        final ok = await _loadComplete!.future.timeout(
+          const Duration(seconds: 10),
+        );
+        if (!ok) {
+          disconnect();
+          return false;
+        }
+      } on TimeoutException {
+        disconnect();
+        return false;
+      }
 
       currentPosition = Duration.zero;
       isPlaying = true;
@@ -480,7 +497,7 @@ class CastV2Connection {
   }
 
   void _handleMediaMessage(String type, Map<String, dynamic> payload) {
-    // MEDIA_STATUS response from GET_STATUS.
+    // MEDIA_STATUS response from GET_STATUS or LOAD.
     if (type == 'MEDIA_STATUS') {
       final status = (payload['status'] as List?)?.firstOrNull as Map<String, dynamic>?;
       if (status != null) {
@@ -490,6 +507,18 @@ class CastV2Connection {
         final currentTime = status['currentTime'] as num? ?? 0;
         currentPosition = Duration(seconds: currentTime.toInt());
         onChange.add(null);
+
+        // Signal that LOAD completed successfully.
+        if (_loadComplete != null && !_loadComplete!.isCompleted) {
+          _loadComplete!.complete(true);
+        }
+      }
+    }
+
+    // LOAD_FAILED or INVALID_REQUEST from the receiver.
+    if (type == 'LOAD_FAILED' || type == 'INVALID_REQUEST') {
+      if (_loadComplete != null && !_loadComplete!.isCompleted) {
+        _loadComplete!.complete(false);
       }
     }
   }

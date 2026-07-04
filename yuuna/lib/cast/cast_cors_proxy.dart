@@ -7,15 +7,20 @@ import 'dart:io';
 /// Jellyfin doesn't always return CORS headers, so we proxy through this
 /// local server to inject them.
 ///
+/// The proxy preserves the full original stream URL (path + query params)
+/// so the Chromecast receives the actual video stream, not just the server
+/// root.
+///
 /// Usage:
 /// ```dart
 /// final proxy = await CastCorsProxy.start('http://192.168.0.73:8096/Videos/...');
-/// print(proxy.publicUrl); // http://192.168.0.100:54321/proxy
+/// print(proxy.publicUrl); // http://192.168.0.100:54321/stream
 /// // Use this URL as the contentId for Chromecast LOAD.
 /// ```
 class CastCorsProxy {
   HttpServer? _server;
   final String _targetBase;
+  final String _targetPathAndQuery;
   final String _host;
   final String _targetHost;
   final int _targetPort;
@@ -23,11 +28,13 @@ class CastCorsProxy {
 
   CastCorsProxy._({
     required String targetBase,
+    required String targetPathAndQuery,
     required String host,
     required String targetHost,
     required int targetPort,
     required bool targetIsHttps,
   })  : _targetBase = targetBase,
+        _targetPathAndQuery = targetPathAndQuery,
         _host = host,
         _targetHost = targetHost,
         _targetPort = targetPort,
@@ -55,8 +62,13 @@ class CastCorsProxy {
       // Build the target base URL (scheme + host + port).
       final targetBase = '${uri.scheme}://${uri.host}:$targetPort';
 
+      // Preserve the original path and query so the proxy forwards to
+      // the actual stream endpoint, not just the server root.
+      final targetPathAndQuery = uri.path + (uri.query.isNotEmpty ? '?${uri.query}' : '');
+
       final proxy = CastCorsProxy._(
         targetBase: targetBase,
+        targetPathAndQuery: targetPathAndQuery,
         host: hostIp,
         targetHost: uri.host,
         targetPort: targetPort,
@@ -84,13 +96,10 @@ class CastCorsProxy {
 
   Future<void> _handleRequest(HttpRequest request) async {
     try {
-      // Reconstruct the target path from the full original URL.
-      var targetPath = request.uri.path;
-      if (targetPath.startsWith('/stream')) {
-        targetPath = targetPath.replaceFirst('/stream', '');
-      }
-      final targetQuery = request.uri.query;
-      final targetUrl = '$_targetBase$targetPath${targetQuery.isNotEmpty ? '?$targetQuery' : ''}';
+      // Always forward to the original saved path + query.
+      // The Chromecast accesses /stream, but the actual Jellyfin endpoint
+      // is /Videos/{id}/stream?Static=true&... preserved in _targetPathAndQuery.
+      final targetUrl = '$_targetBase$_targetPathAndQuery';
 
       // Forward the request to Jellyfin.
       final client = HttpClient()

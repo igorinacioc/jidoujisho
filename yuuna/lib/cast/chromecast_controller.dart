@@ -47,7 +47,8 @@ class ChromecastController extends CastSession {
   }) async {
     try {
       final proxy = await CastCorsProxy.start(streamUrl);
-      final mediaUrl = proxy?.publicUrl ?? streamUrl;
+      if (proxy == null) return null;
+      final mediaUrl = proxy.publicUrl;
 
       final connection = CastV2Connection(host: device.host, port: device.port);
       if (!await connection.connect()) { proxy?.stop(); return null; }

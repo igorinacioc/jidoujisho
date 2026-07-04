@@ -35,31 +35,48 @@ class _JellyfinLibraryPageState extends ConsumerState<JellyfinLibraryPage> {
 
   Future<void> _load() async {
     setState(() { _loading = true; _error = null; });
+    debugPrint('[JellyfinLibrary] Loading library...');
 
     try {
       if (!_source.isLoggedIn) {
+        debugPrint('[JellyfinLibrary] Not logged in, restoring session...');
         await _source.restoreSession();
       }
       if (!_source.isLoggedIn) {
+        debugPrint('[JellyfinLibrary] Session restore failed.');
         setState(() { _loading = false; _error = 'Not connected. Open settings to connect.'; });
         return;
       }
 
+      debugPrint('[JellyfinLibrary] Fetching views + resume + latest...');
       final results = await Future.wait([
         _source.getViews(),
-        _source.serverClient!.userLibraryApi.getResumeItems(limit: 10).catchError((_) => <server_core.MediaItem>[]),
-        _source.serverClient!.userLibraryApi.getLatestItems(limit: 10).catchError((_) => <server_core.MediaItem>[]),
+        _source.serverClient!.userLibraryApi.getResumeItems(limit: 10).catchError((e) {
+          debugPrint('[JellyfinLibrary] Resume items error: $e');
+          return <server_core.MediaItem>[];
+        }),
+        _source.serverClient!.userLibraryApi.getLatestItems(limit: 10).catchError((e) {
+          debugPrint('[JellyfinLibrary] Latest items error: $e');
+          return <server_core.MediaItem>[];
+        }),
       ]);
+
+      final views = results[0] as List<server_core.MediaItem>;
+      final resumeItems = results[1] as List<server_core.MediaItem>;
+      final latestItems = results[2] as List<server_core.MediaItem>;
+      debugPrint('[JellyfinLibrary] Loaded: ${views.length} views, '
+          '${resumeItems.length} resume, ${latestItems.length} latest');
 
       if (mounted) {
         setState(() {
-          _views = results[0] as List<server_core.MediaItem>;
-          _continueWatching = results[1] as List<server_core.MediaItem>;
-          _latest = results[2] as List<server_core.MediaItem>;
+          _views = views;
+          _continueWatching = resumeItems;
+          _latest = latestItems;
           _loading = false;
         });
       }
     } catch (e) {
+      debugPrint('[JellyfinLibrary] ❌ Load error: $e');
       if (mounted) setState(() { _loading = false; _error = e.toString(); });
     }
   }

@@ -31,6 +31,15 @@ void main() {
     /// starting the application.
     final binding = WidgetsFlutterBinding.ensureInitialized();
 
+    /// Capture Flutter framework errors (like "Null check operator") and
+    /// log them so they appear in `adb logcat -s flutter`.
+    FlutterError.onError = (details) {
+      debugPrint('🔴 FLUTTER ERROR: ${details.exception}');
+      debugPrint('🔴 STACK TRACE:');
+      debugPrint(details.stack?.toString() ?? '  <no stack>');
+      FlutterError.presentError(details);
+    };
+
     /// Initialize media_kit (libmpv) for Jellyfin playback.
     MediaKit.ensureInitialized();
 

@@ -783,7 +783,9 @@ class AppModel with ChangeNotifier {
         ViewerCameraSource.instance,
       ],
       DictionaryMediaType.instance: [],
-      JellyfinMediaType.instance: [],
+      JellyfinMediaType.instance: [
+        PlayerJellyfinSource.instance,
+      ],
     };
 
     mediaSources = Map<MediaType, Map<String, MediaSource>>.unmodifiable(

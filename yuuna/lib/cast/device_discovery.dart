@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:server_core/server_core.dart';
 import 'cast_models.dart';
 import 'chromecast_discovery.dart';
+import 'multicast_lock.dart';
 
 class DeviceDiscovery {
   static const _multicastAddress = '239.255.255.250';
@@ -17,10 +19,25 @@ class DeviceDiscovery {
   DeviceDiscovery(this._sessionApi);
 
   Future<List<CastTarget>> discover() async {
-    final results = await Future.wait([
-      _discoverSsdpDevices(), _discoverJellyfinDevices(), _discoverChromecastDevices(),
-    ]);
-    return _mergeDevices(results[0] as List<DiscoveredDevice>, results[1] as List<ServerDevice>, results[2] as List<DiscoveredDevice>);
+    debugPrint('[Discovery] Starting device discovery...');
+    await MulticastLockHolder.acquire();
+    try {
+      final results = await Future.wait([
+        _discoverSsdpDevices(), _discoverJellyfinDevices(), _discoverChromecastDevices(),
+      ]);
+      final ssdp = results[0] as List<DiscoveredDevice>;
+      final jf = results[1] as List<ServerDevice>;
+      final cc = results[2] as List<DiscoveredDevice>;
+      debugPrint('[Discovery] Results: SSDP=${ssdp.length} Jellyfin=${jf.length} mDNS/CC=${cc.length}');
+      for (final d in ssdp) { debugPrint('[Discovery] SSDP: "${d.name}" type=${d.type} ip=${d.ip}'); }
+      for (final d in jf) { debugPrint('[Discovery] Jellyfin: "${d.name}" app=${d.appName}'); }
+      for (final d in cc) { debugPrint('[Discovery] Chromecast: "${d.name}" ip=${d.ip} port=${d.port}'); }
+      final merged = _mergeDevices(ssdp, jf, cc);
+      debugPrint('[Discovery] Total merge targets: ${merged.length}');
+      return merged;
+    } finally {
+      await MulticastLockHolder.release();
+    }
   }
 
   Future<List<DiscoveredDevice>> _discoverSsdpDevices() async {

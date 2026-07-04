@@ -1,3 +1,5 @@
+import 'dart:developer' as developer;
+
 import 'package:dio/dio.dart';
 import 'package:server_core/server_core.dart';
 
@@ -146,6 +148,7 @@ class JellyfinItemsApi implements ItemsApi {
 
   @override
   Future<List<MediaItem>> getSeasons(String seriesId) async {
+    developer.log('[JellyfinItemsApi] getSeasons: $seriesId');
     final response = await _dio.get(
       '/Shows/$seriesId/Seasons',
       queryParameters: {
@@ -155,6 +158,7 @@ class JellyfinItemsApi implements ItemsApi {
     );
     final data = response.data as Map<String, dynamic>;
     final items = data['items'] as List<dynamic>? ?? [];
+    developer.log('[JellyfinItemsApi] getSeasons result: ${items.length} seasons');
     return items
         .map((e) => MediaItem.fromJson(e as Map<String, dynamic>))
         .toList();
@@ -175,12 +179,17 @@ class JellyfinItemsApi implements ItemsApi {
     if (startIndex != null) query['StartIndex'] = startIndex.toString();
     if (limit != null) query['Limit'] = limit.toString();
 
+    developer.log('[JellyfinItemsApi] getEpisodes: series=$seriesId season=$seasonId');
     final response = await _dio.get(
       '/Shows/$seriesId/Episodes',
       queryParameters: query,
     );
     final data = response.data as Map<String, dynamic>;
     final items = data['items'] as List<dynamic>? ?? [];
+    developer.log('[JellyfinItemsApi] getEpisodes result: ${items.length} episodes');
+    if (items.isNotEmpty) {
+      developer.log('[JellyfinItemsApi] First episode raw: ${items.first}');
+    }
     return items
         .map((e) => MediaItem.fromJson(e as Map<String, dynamic>))
         .toList();

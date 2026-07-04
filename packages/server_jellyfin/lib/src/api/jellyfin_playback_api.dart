@@ -1,3 +1,5 @@
+import 'dart:developer' as developer;
+
 import 'package:dio/dio.dart';
 import 'package:server_core/server_core.dart';
 
@@ -19,7 +21,6 @@ class JellyfinPlaybackApi implements PlaybackApi {
     String? audioCodec,
   }) {
     final params = <String, String>{
-      'Static': 'true',
       'MediaSourceId': mediaSourceId,
       'ApiKey': _token,
     };
@@ -37,19 +38,26 @@ class JellyfinPlaybackApi implements PlaybackApi {
     int subtitleIndex, {
     String? format,
   }) async {
-    // Jellyfin 10.11+ uses file extension for format (Stream.vtt), not query param.
-    // Older versions accept ?format=srt on /Stream (without extension).
-    // We default to .vtt (WebVTT) which works on 10.11+.
     final ext = format != null && format.isNotEmpty ? format : 'vtt';
-    final response = await _dio.get(
-      '/Videos/$itemId/$mediaSourceId/Subtitles/$subtitleIndex/Stream.$ext',
-      queryParameters: {'api_key': _token},
-      options: Options(
-        responseType: ResponseType.plain,
-        headers: {'Accept': 'text/plain'},
-      ),
-    );
-    return response.data as String;
+    final path = '/Videos/$itemId/$mediaSourceId/Subtitles/$subtitleIndex/Stream.$ext';
+    developer.log('[JellyfinPlaybackApi] Fetching subtitle: $path');
+    try {
+      final response = await _dio.get(
+        path,
+        queryParameters: {'api_key': _token},
+        options: Options(
+          responseType: ResponseType.plain,
+          headers: {'Accept': 'text/plain'},
+        ),
+      );
+      final content = response.data as String;
+      developer.log('[JellyfinPlaybackApi] ✅ Subtitle fetched: ${content.length} chars, '
+          'status=${response.statusCode}');
+      return content;
+    } catch (e) {
+      developer.log('[JellyfinPlaybackApi] ❌ Subtitle fetch failed: $e');
+      rethrow;
+    }
   }
 
   @override

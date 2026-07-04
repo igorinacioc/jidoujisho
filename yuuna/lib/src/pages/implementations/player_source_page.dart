@@ -247,6 +247,18 @@ class _PlayerSourcePageState extends BaseSourcePageState<PlayerSourcePage>
       return;
     }
 
+    debugPrint('[Player] Initializing player...');
+
+    // Capture any null-check errors that Flutter would show as red screen.
+    // The red screen error is caught by Flutter's ErrorWidget but NOT logged
+    // to logcat. This handler ensures we see the stack trace.
+    final oldOnError = FlutterError.onError;
+    FlutterError.onError = (details) {
+      debugPrint('[Player] 🔴 FLUTTER ERROR: ${details.exception}');
+      debugPrint('[Player] 🔴 STACK: ${details.stack}');
+      oldOnError?.call(details);
+    };
+
     await Future.delayed(const Duration(seconds: 1), () {});
 
     appModel.currentMediaPauseStream.listen((event) {
@@ -337,6 +349,8 @@ class _PlayerSourcePageState extends BaseSourcePageState<PlayerSourcePage>
 
     _playerController = futures.elementAt(0) as UniversalPlayerController;
     _subtitleItems = futures.elementAt(1) as List<SubtitleItem>;
+    debugPrint('[Player] Backend: ${_playerController.backendType}');
+    debugPrint('[Player] Subtitle items loaded: ${_subtitleItems.length}');
     _transcriptBackgroundNotifier.value = appModel.isTranscriptOpaque;
 
     if (source is PlayerLocalMediaSource) {
@@ -385,9 +399,16 @@ class _PlayerSourcePageState extends BaseSourcePageState<PlayerSourcePage>
 
     if (_subtitleItems.isNotEmpty) {
       _subtitleItem = _subtitleItems.first;
+      debugPrint('[Player] Loaded ${_subtitleItems.length} subtitle items. '
+          'Active: "${getSubtitleLabel(item: _subtitleItem, embeddedTracks: {})}" '
+          'cues=${_subtitleItem.controller.subtitles.length}');
+    } else {
+      debugPrint('[Player] ⚠️ No subtitle items loaded!');
     }
     if (!_subtitleItem.controller.initialized) {
-      _subtitleItem.controller.initial();
+      debugPrint('[Player] Calling subtitle controller.initial()...');
+      await _subtitleItem.controller.initial();
+      debugPrint('[Player] After initial(): ${_subtitleItem.controller.subtitles.length} cues');
     }
 
     _blurOptionsNotifier = ValueNotifier<BlurOptions>(appModel.blurOptions);
@@ -396,7 +417,8 @@ class _PlayerSourcePageState extends BaseSourcePageState<PlayerSourcePage>
     // ignore: deprecated_member_use_from_same_package
     appModel.currentPlayerController = _playerController.vlcController;
     _currentSubtitle = appModel.currentSubtitle;
-    _subtitleOptionsNotifier = appModel.currentSubtitleOptions!;
+    _subtitleOptionsNotifier = appModel.currentSubtitleOptions ??
+        ValueNotifier<SubtitleOptions>(appModel.subtitleOptions);
 
     _currentSubtitle.value = null;
     appModel.blockCreatorInitialMedia = true;
@@ -448,17 +470,25 @@ class _PlayerSourcePageState extends BaseSourcePageState<PlayerSourcePage>
     }
 
     _playerController.addOnInitListener(() async {
-      if (!mounted) {
-        return;
-      }
+      try {
+        if (!mounted) {
+          return;
+        }
 
-      if (_playerController.vlcController != null) {
-        initialiseEmbeddedSubtitles(_playerController.vlcController!);
-      }
+        if (_playerController.vlcController != null) {
+          initialiseEmbeddedSubtitles(_playerController.vlcController!);
+        }
 
-      Future.delayed(const Duration(seconds: 5), () {
-        appModel.blockCreatorInitialMedia = false;
-      });
+        Future.delayed(const Duration(seconds: 5), () {
+          try {
+            appModel.blockCreatorInitialMedia = false;
+          } catch (e) {
+            debugPrint('[Player] Error in delayed init: $e');
+          }
+        });
+      } catch (e) {
+        debugPrint('[Player] Error in addOnInitListener: $e');
+      }
     });
 
     if (mounted && appModel.isMediaOpen) {
@@ -528,6 +558,7 @@ class _PlayerSourcePageState extends BaseSourcePageState<PlayerSourcePage>
 
     _session.setActive(true);
 
+    debugPrint('[Player] ✅ Initialization complete.');
     setState(() {
       _playerInitialised = true;
     });
@@ -588,6 +619,13 @@ class _PlayerSourcePageState extends BaseSourcePageState<PlayerSourcePage>
 
       Subtitle? newSubtitle = _subtitleItem.controller
           .durationSearch(_positionNotifier.value + subtitleDelay);
+      // Log on first valid position or when subtitle changes.
+      if (_positionNotifier.value.inSeconds == 1 || _currentSubtitle.value != newSubtitle) {
+        debugPrint('[Player] pos=${_positionNotifier.value.inSeconds}s '
+            'subtitle=${newSubtitle?.data?.substring(0, newSubtitle.data.length < 60 ? newSubtitle.data.length : 60)}... '
+            'cues=${_subtitleItem.controller.subtitles.length} '
+            'playing=${_playingNotifier.value} ended=${_endedNotifier.value}');
+      }
       String sentence = _currentSubtitle.value?.data ?? '';
       String regex = _subtitleOptionsNotifier.value.regexFilter;
       if (regex.isNotEmpty) {
@@ -1724,7 +1762,7 @@ class _PlayerSourcePageState extends BaseSourcePageState<PlayerSourcePage>
           if (idx != null && idx != currentIdx) {
             _subtitleItem = _subtitleItems[idx];
             if (!_subtitleItem.controller.initialized) {
-              _subtitleItem.controller.initial();
+              await _subtitleItem.controller.initial();
             }
             _currentSubtitle.value = null;
             widget.source.clearCurrentSentence();
@@ -2079,7 +2117,7 @@ class _PlayerSourcePageState extends BaseSourcePageState<PlayerSourcePage>
         action: () {
           _subtitleItem = item;
           if (!_subtitleItem.controller.initialized) {
-            _subtitleItem.controller.initial();
+            _subtitleItem.controller.initial(); // fire-and-forget OK for UI toggle
           }
           _currentSubtitle.value = null;
           widget.source.clearCurrentSentence();

@@ -482,8 +482,10 @@ o loop de inicialização quebra porque `mediaSources[type]` retorna `null`.
 - ✅ App inicia sem crash
 - ✅ Login Jellyfin funcional (port forwarding para emulador)
 - ✅ Emulador yuuna_test funcionando com `-gpu swiftshader_indirect`
-- ⚠️ Player bugs (icone central, barra progresso, legendas) em investigacao
-- ⚠️ Series: temporadas sem videos (possivel cache/API type mismatch)
+- ❌ Player: ícone central (replay) preso no meio da tela — `_isEnded` pode estar vindo true
+- ❌ Player: barra de progresso no fim (tempo cheio) — mesma causa do ícone
+- ❌ Player: legendas não aparecem — `durationSearch` não acha subtitle com posição zerada
+- ❌ Series: temporada não mostra episódios — possível `getEpisodes` retornando vazio ou type mismatch
 
 ### ⚠️ Emulador NAT vs Jellyfin — Port Forwarding (2026-06-26)
 

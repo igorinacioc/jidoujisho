@@ -138,7 +138,9 @@ class MediaItem {
   /// Get the [MediaSource] from a [MediaItem] from its serialised identifier.
   MediaSource getMediaSource({required AppModel appModel}) {
     MediaType mediaType = getMediaType(appModel: appModel);
-    return appModel.mediaSources[mediaType]![mediaSourceIdentifier]!;
+    final source = appModel.mediaSources[mediaType]?[mediaSourceIdentifier];
+    if (source != null) return source;
+    throw Exception('MediaSource not found: type=$mediaType id=$mediaSourceIdentifier');
   }
 
   /// Creates a deep copy of this mapping but with the given variables replaced

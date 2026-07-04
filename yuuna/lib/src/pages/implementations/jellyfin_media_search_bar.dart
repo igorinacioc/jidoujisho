@@ -115,15 +115,23 @@ class _JellyfinBrowsePageState extends ConsumerState<JellyfinBrowsePage> {
 
   Future<void> _loadItems() async {
     setState(() => _loading = true);
+    final p = widget.parentItem;
+    debugPrint('[JellyfinBrowse] Loading items: name="${p.name}" type="${p.type}" '
+        'id="${p.id}" seriesId="${widget.seriesId}"');
     try {
-      final p = widget.parentItem;
       final seriesId = widget.seriesId ?? (p.type == 'Series' ? p.id : null);
       _items = await _source.getItems(
         p.id,
         parentType: p.type,
         seriesId: seriesId,
       );
-    } catch (_) {
+      debugPrint('[JellyfinBrowse] ✅ Got ${_items?.length ?? 0} items');
+      if (_items != null && _items!.isNotEmpty) {
+        debugPrint('[JellyfinBrowse] First item: name="${_items![0].name}" '
+            'type="${_items![0].type}" isFolder=${_items![0].isFolder}');
+      }
+    } catch (e) {
+      debugPrint('[JellyfinBrowse] ❌ Error: $e');
       _items = null;
     }
     if (mounted) {

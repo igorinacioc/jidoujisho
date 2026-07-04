@@ -46,12 +46,22 @@ class _MiningModePageState extends State<MiningModePage> {
   @override
   void initState() {
     super.initState();
+    debugPrint('[MiningMode] Init: ${widget.subtitles.length} subtitle files, '
+        'total cues=${widget.subtitles.fold<int>(0, (sum, s) => sum + s.controller.subtitles.length)}');
+    for (int i = 0; i < widget.subtitles.length; i++) {
+      final s = widget.subtitles[i];
+      debugPrint('[MiningMode] Subtitle $i: "${s.metadata}" '
+          'cues=${s.controller.subtitles.length} '
+          'initialized=${s.controller.initialized}');
+    }
     widget.castSession.addListener(_onSessionUpdate);
     widget.castSession.startPolling();
+    debugPrint('[MiningMode] Started polling, session active=${widget.castSession.isActive}');
   }
 
   @override
   void dispose() {
+    debugPrint('[MiningMode] Disposing, stopping polling');
     widget.castSession.removeListener(_onSessionUpdate);
     super.dispose();
   }
@@ -61,6 +71,8 @@ class _MiningModePageState extends State<MiningModePage> {
     if (!mounted) return;
     _updateCurrentSubtitle();
   }
+
+  bool _firstSubtitleLogged = false;
 
   /// Finds the subtitle that corresponds to the current remote position.
   void _updateCurrentSubtitle() {
@@ -83,6 +95,12 @@ class _MiningModePageState extends State<MiningModePage> {
     }
 
     if (bestMatch == null) {
+      if (!_firstSubtitleLogged || pos.inSeconds % 5 == 0) {
+        debugPrint('[MiningMode] No matching subtitle at position=${pos.inSeconds}s '
+            '(have ${widget.subtitles.length} files). '
+            'First cue starts at ${widget.subtitles.isNotEmpty && widget.subtitles.first.controller.subtitles.isNotEmpty ? widget.subtitles.first.controller.subtitles.first.start.inSeconds : "N/A"}s');
+        _firstSubtitleLogged = true;
+      }
       return;
     }
 
@@ -93,12 +111,13 @@ class _MiningModePageState extends State<MiningModePage> {
     );
 
     if (newIndex != -1 && newIndex != _currentIndex) {
+      debugPrint('[MiningMode] ✅ Subtitle #$newIndex at ${pos.inSeconds}s: '
+          '"${subs[newIndex].data.substring(0, subs[newIndex].data.length < 80 ? subs[newIndex].data.length : 80)}"');
       setState(() {
         _currentIndex = newIndex;
         _currentSubtitle = subs[newIndex];
       });
 
-      // If looping is enabled, seek back to start of this subtitle.
       if (_isLooping && _currentSubtitle != null) {
         final endPos = _currentSubtitle!.end;
         if (pos >= endPos) {

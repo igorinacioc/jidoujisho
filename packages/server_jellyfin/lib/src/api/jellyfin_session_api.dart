@@ -54,10 +54,13 @@ class JellyfinSessionApi implements SessionApi {
       'DeviceId': deviceId,
     });
 
-    // Give the server a moment, then find the session.
-    await Future.delayed(const Duration(seconds: 1));
-    final session = await getSession(deviceId);
-    return session?.id;
+    // Poll for session creation with retry (up to 5 attempts, 1s between).
+    for (int i = 0; i < 5; i++) {
+      await Future.delayed(const Duration(seconds: 1));
+      final session = await getSession(deviceId);
+      if (session != null) return session.id;
+    }
+    return null;
   }
 
   @override
