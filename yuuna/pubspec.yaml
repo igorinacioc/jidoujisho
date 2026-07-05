@@ -14,8 +14,6 @@ dependencies:
     path: ../packages/server_jellyfin
   playback_core:
     path: ../packages/playback_core
-  media_cast_dlna:
-    path: ../local_fixes/media_cast_dlna
   media_kit: ^1.1.11
   media_kit_video: ^1.2.5
   media_kit_libs_android_video: ^1.3.8

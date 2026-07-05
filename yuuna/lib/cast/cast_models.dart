@@ -1,5 +1,4 @@
 import 'package:flutter/foundation.dart';
-import 'package:media_cast_dlna/media_cast_dlna.dart';
 import 'package:server_core/server_core.dart';
 import 'package:yuuna/cast/chromecast_discovery.dart';
 
@@ -25,8 +24,8 @@ class CastTarget {
   /// The mDNS-discovered Chromecast device, if available (for Google Cast direct).
   final ChromecastDevice? chromecastDevice;
 
-  /// The DLNA device discovered via media_cast_dlna (jUPnP), if available.
-  final DlnaDevice? dlnaDevice;
+  /// The DLNA device discovered via SSDP/UPnP, if available.
+  final DiscoveredDevice? dlnaDevice;
 
   const CastTarget({
     required this.name,

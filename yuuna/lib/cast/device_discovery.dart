@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
-import 'package:media_cast_dlna/media_cast_dlna.dart';
 import 'package:server_core/server_core.dart';
 
 import 'cast_models.dart';
@@ -11,47 +10,41 @@ import 'dlna_discovery_service.dart';
 
 /// Discovers cast targets on the local network using three independent methods:
 ///
-/// 1. **DLNA (jUPnP via media_cast_dlna)** — finds UPnP MediaRenderers
-///    (Samsung, LG, Fire TV, Roku, and any DLNA-certified TV).
+/// 1. **DLNA (SSDP)** — finds UPnP MediaRenderers (Samsung, LG, Fire TV, etc.).
 /// 2. **Chromecast mDNS** — finds Google Cast devices via `_googlecast._tcp.local`.
 /// 3. **Jellyfin API** — lists Jellyfin-registered clients (Android TV, etc.).
 ///
 /// Results are merged into a unified [CastTarget] list for the picker UI.
+///
+/// Note: The DLNA discovery uses our own SSDP implementation today, but
+/// [DlnaDiscoveryService] is designed to be swappable for `media_cast_dlna`
+/// (jUPnP) when the project upgrades beyond Flutter 3.13.5.
 class DeviceDiscovery {
   static const _mdnsTimeout = Duration(seconds: 8);
 
   final SessionApi _sessionApi;
-  DlnaDiscoveryService? _dlnaService;
 
   DeviceDiscovery(this._sessionApi);
-
-  /// Ensures the DLNA discovery service is initialized (one-time).
-  Future<DlnaDiscoveryService> _getDlnaService() async {
-    _dlnaService ??= DlnaDiscoveryService();
-    await _dlnaService!.initialize();
-    return _dlnaService!;
-  }
 
   /// Discovers all available cast targets across DLNA, Chromecast, and Jellyfin.
   Future<List<CastTarget>> discover() async {
     debugPrint('[Discovery] Starting device discovery...');
 
-    // Start DLNA early (event-driven, runs in background).
-    final dlnaFuture = _getDlnaService().then((s) => s.discover());
+    final dlnaService = DlnaDiscoveryService();
 
     final results = await Future.wait([
-      dlnaFuture,
+      dlnaService.discover(),
       _discoverChromecastDevices(),
       _discoverJellyfinDevices(),
     ]);
 
-    final dlna = results[0] as List<DlnaDevice>;
+    final dlna = results[0] as List<DiscoveredDevice>;
     final cc = results[1] as List<DiscoveredDevice>;
     final jf = results[2] as List<ServerDevice>;
 
-    debugPrint('[Discovery] Results: DLNA=${dlna.length} Chromecast=${cc.length} Jellyfin=${jf.length}');
+    debugPrint('[Discovery] Results: SSDP=${dlna.length} Chromecast=${cc.length} Jellyfin=${jf.length}');
     for (final d in dlna) {
-      debugPrint('[Discovery] DLNA: "${d.friendlyName}" [${d.manufacturerDetails.manufacturer}]');
+      debugPrint('[Discovery] SSDP: "${d.name}" type=${d.type} ip=${d.ip}');
     }
     for (final d in cc) {
       debugPrint('[Discovery] Chromecast: "${d.name}" ip=${d.ip} port=${d.port}');
@@ -120,7 +113,7 @@ class DeviceDiscovery {
   // ─── Merge ─────────────────────────────────────────────────────────────
 
   List<CastTarget> _mergeDevices(
-    List<DlnaDevice> dlna,
+    List<DiscoveredDevice> ssdp,
     List<ServerDevice> jf,
     List<DiscoveredDevice> cc,
   ) {
@@ -141,19 +134,17 @@ class DeviceDiscovery {
       }
     }
 
-    // 2. Jellyfin devices — try to match with DLNA and Chromecast.
+    // 2. Jellyfin devices — try to match with SSDP devices.
     for (final d in jf) {
       final k = d.name.toLowerCase();
       if (sn.contains(k)) continue;
       sn.add(k);
 
-      // Match Jellyfin device with a DLNA device by name/IP.
-      DlnaDevice? matchedDlna;
-      for (final dl in dlna) {
-        if (_simNames(dl.friendlyName, d.name) ||
-            dl.ipAddress.value == d.id ||
-            dl.ipAddress.value == d.lastUserName) {
-          matchedDlna = dl;
+      // Match Jellyfin device with an SSDP device by name/IP.
+      DiscoveredDevice? matchedSsdp;
+      for (final sd in ssdp) {
+        if (_simNames(sd.name, d.name) || sd.ip == d.id) {
+          matchedSsdp = sd;
           break;
         }
       }
@@ -163,73 +154,29 @@ class DeviceDiscovery {
         type: d.appName ?? 'Jellyfin Client',
         icon: CastDeviceIcon.tv,
         jellyfinDevice: d,
-        dlnaDevice: matchedDlna,
+        dlnaDevice: matchedSsdp,
+        ssdpDevice: matchedSsdp, // For backward compat.
       ));
     }
 
-    // 3. Remaining DLNA devices (not matched to Jellyfin).
-    for (final d in dlna) {
-      final k = d.friendlyName.toLowerCase();
+    // 3. Remaining SSDP/DLNA devices (not matched to Jellyfin or Chromecast).
+    for (final d in ssdp) {
+      final k = d.name.toLowerCase();
       if (sn.contains(k)) continue;
       sn.add(k);
 
-      final type = _classifyDlnaDevice(d);
       tg.add(CastTarget(
-        name: d.friendlyName,
-        type: type,
-        icon: CastDeviceIcon.tv,
+        name: d.name,
+        type: d.type,
+        icon: d.iconType,
         dlnaDevice: d,
+        ssdpDevice: d,
       ));
     }
 
     return tg;
   }
 
-  /// Classifies a [DlnaDevice] into a human-readable type string.
-  String _classifyDlnaDevice(DlnaDevice d) {
-    final mfr = d.manufacturerDetails.manufacturer.toLowerCase();
-    final model = d.modelDetails.modelName.toLowerCase();
-
-    if (mfr.contains('samsung') || model.contains('samsung') || model.contains('tizen')) {
-      return 'Samsung TV';
-    }
-    if (mfr.contains('lg') || model.contains('lg') || model.contains('webos')) {
-      return 'LG TV';
-    }
-    if (mfr.contains('amazon') || model.contains('fire') || model.contains('aft')) {
-      return 'Fire TV';
-    }
-    if (mfr.contains('roku') || model.contains('roku')) {
-      return 'Roku';
-    }
-    if (mfr.contains('sony') || model.contains('sony') || model.contains('bravia')) {
-      return 'Sony TV';
-    }
-    if (mfr.contains('google') || model.contains('chromecast')) {
-      return 'Google Cast';
-    }
-    if (model.contains('android') || model.contains('android tv')) {
-      return 'Android TV';
-    }
-    if (mfr.contains('microsoft') || model.contains('xbox')) {
-      return 'Xbox';
-    }
-    if (mfr.contains('sony') && (model.contains('playstation') || model.contains('ps'))) {
-      return 'PlayStation';
-    }
-    return 'Smart TV';
-  }
-
   bool _simNames(String a, String b) =>
       a.toLowerCase().replaceAll(' ', '') == b.toLowerCase().replaceAll(' ', '');
-
-  /// Disposes the internal DLNA discovery service.
-  void dispose() {
-    _dlnaService?.dispose();
-    _dlnaService = null;
-  }
-
-  /// The shared [MediaCastDlnaApi] instance, available after the first discovery.
-  /// Used by [DlnaController] for playback control without re-initializing jUPnP.
-  MediaCastDlnaApi? get dlnaApi => _dlnaService?.api;
 }
