@@ -100,6 +100,7 @@
             </intent-filter>
         </activity>
         <!-- Used for dictionary search via global context menu option -->
+        <service android:name="org.jupnp.android.AndroidUpnpServiceImpl"/>
         <service android:name="com.gomes.nowplaying.NowPlayingListenerService"
             android:label="NowPlayingListenerService"
             android:exported="true"

@@ -473,21 +473,29 @@ class PlayerJellyfinSource extends PlayerMediaSource {
         return;
       }
 
-      // DLNA.
-      if (target.isDlna && target.ssdpDevice?.locationUrl != null) {
-        debugPrint('[Cast+Mine] → DLNA path: ${target.name}');
+      // DLNA (media_cast_dlna / jUPnP).
+      if (target.dlnaDevice != null && discovery.dlnaApi != null) {
+        debugPrint('[Cast+Mine] → DLNA (jUPnP) path: ${target.name}');
         final streamUrl = _c.playbackApi.getStreamUrl(item.mediaIdentifier, msId);
         final ctrl = await DlnaController.connect(
+          api: discovery.dlnaApi!,
           streamUrl: streamUrl,
-          deviceLocationUrl: target.ssdpDevice!.locationUrl!,
-          deviceName: target.ssdpDevice!.name,
+          title: item.title ?? target.name,
+          udn: target.dlnaDevice!.udn,
+          deviceName: target.name,
+          mediaDuration: jItem.runTimeTicks != null
+              ? Duration(microseconds: (jItem.runTimeTicks! * 10) ~/ 1000)
+              : null,
         );
         if (ctrl == null) {
           debugPrint('[Cast+Mine] ❌ DLNA connection failed!');
-          if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('DLNA connection failed.')));
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('DLNA connection failed.')));
+          }
           return;
         }
+        debugPrint('[Cast+Mine] ✅ DLNA connected, opening MiningModePage');
         if (!context.mounted) return;
         await Navigator.of(context).push(MaterialPageRoute(
           builder: (ctx) => MiningModePage(

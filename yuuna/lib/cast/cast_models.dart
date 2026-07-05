@@ -1,10 +1,11 @@
 import 'package:flutter/foundation.dart';
+import 'package:media_cast_dlna/media_cast_dlna.dart';
 import 'package:server_core/server_core.dart';
 import 'package:yuuna/cast/chromecast_discovery.dart';
 
 /// Represents a potential cast target, unifying mDNS-discovered Chromecasts,
-/// SSDP-discovered devices, and Jellyfin-registered devices into a single
-/// model for the picker UI.
+/// DLNA-discovered devices (via media_cast_dlna / jUPnP), and Jellyfin-registered
+/// devices into a single model for the picker UI.
 class CastTarget {
   /// Human-readable name to display in the device picker.
   final String name;
@@ -18,11 +19,14 @@ class CastTarget {
   /// The Jellyfin-registered device, if available (for Jellyfin session casting).
   final ServerDevice? jellyfinDevice;
 
-  /// The SSDP-discovered device, if available (for DLNA/UPnP direct casting).
+  /// The SSDP-discovered device, if available (for Chromecast via mDNS/SSDP).
   final DiscoveredDevice? ssdpDevice;
 
   /// The mDNS-discovered Chromecast device, if available (for Google Cast direct).
   final ChromecastDevice? chromecastDevice;
+
+  /// The DLNA device discovered via media_cast_dlna (jUPnP), if available.
+  final DlnaDevice? dlnaDevice;
 
   const CastTarget({
     required this.name,
@@ -31,10 +35,11 @@ class CastTarget {
     this.jellyfinDevice,
     this.ssdpDevice,
     this.chromecastDevice,
+    this.dlnaDevice,
   });
 
-  /// Whether this device supports DLNA direct casting (has SSDP + location URL).
-  bool get isDlna => ssdpDevice?.locationUrl != null;
+  /// Whether this device supports DLNA direct casting (has jUPnP device or SSDP location URL).
+  bool get isDlna => dlnaDevice != null || ssdpDevice?.locationUrl != null;
 
   /// Whether this device supports Jellyfin session casting.
   bool get isJellyfin => jellyfinDevice != null;

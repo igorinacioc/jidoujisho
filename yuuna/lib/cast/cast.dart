@@ -25,6 +25,7 @@ export 'chromecast_discovery.dart';
 export 'device_discovery.dart';
 export 'device_picker.dart';
 export 'dlna_controller.dart';
+export 'dlna_discovery_service.dart';
 export 'multicast_lock.dart';
 export 'player_controller_adapter.dart';
 export 'subtitle_service.dart';
