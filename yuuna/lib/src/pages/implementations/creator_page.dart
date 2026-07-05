@@ -1000,8 +1000,7 @@ class _CreatorPageState extends BasePageState<CreatorPage> {
         onTap: () {
           FocusScope.of(context).requestFocus(FocusNode());
         },
-        // Allow text selection for dictionary lookup even in view mode.
-        enableInteractiveSelection: field is SentenceField ? true : false,
+        enableInteractiveSelection: false,
         readOnly: true,
         decoration: InputDecoration(
           prefixIcon: widget.editEnhancements

@@ -568,6 +568,12 @@ class _PlayerSourcePageState extends BaseSourcePageState<PlayerSourcePage>
     });
 
     _session.setActive(true);
+    await _playerController.setSpuTrack(-1);
+
+    // Disable VLC native subtitle rendering — the app handles subtitles
+    // externally. With Static=true (direct play), MKV files have embedded
+    // subtitles that VLC would render on top of ours, causing duplication.
+    debugPrint('[Player] Disabled VLC native subtitles to avoid duplication.');
 
     debugPrint('[Player] ✅ Initialization complete.');
     setState(() {
@@ -1753,17 +1759,27 @@ class _PlayerSourcePageState extends BaseSourcePageState<PlayerSourcePage>
           if (!context.mounted) {
             return;
           }
-          final options = embeddedTracks.entries.map((e) =>
-            TrackOption(label: e.value, subtitle: 'Track ${e.key}'),
-          ).toList();
+          final trackKeys = embeddedTracks.keys.toList();
+          final options = <TrackOption>[];
+          for (int i = 0; i < trackKeys.length; i++) {
+            final key = trackKeys[i];
+            options.add(TrackOption(
+              label: embeddedTracks[key] ?? 'Track $key',
+              subtitle: 'Track $key',
+            ));
+          }
+          final selectedPos = trackKeys.indexOf(currentTrack);
           final idx = await TrackSelectorDialog.show(
             context,
             title: t.player_option_select_audio,
             options: options,
-            selectedIndex: currentTrack,
+            selectedIndex: selectedPos >= 0 ? selectedPos : 0,
           );
-          if (idx != null && idx != currentTrack) {
-            await _playerController.setAudioTrack(idx);
+          if (idx != null && idx < trackKeys.length) {
+            final actualTrack = trackKeys[idx];
+            if (actualTrack != currentTrack) {
+              await _playerController.setAudioTrack(actualTrack);
+            }
           }
         },
       ),

@@ -125,7 +125,7 @@ abstract class PlayerMediaSource extends MediaSource {
     }
 
     if (subtitles == null && appModel.currentSubtitle.value != null) {
-      subtitles = [appModel.currentSubtitle.value!];
+      subtitles ??= [appModel.currentSubtitle.value!];
       useCurrentTime = true;
       debugPrint('[Mining:img] Using currentSubtitle (useCurrentTime=true)');
     }
@@ -275,7 +275,7 @@ abstract class PlayerMediaSource extends MediaSource {
     }
 
     if (subtitles == null && appModel.currentSubtitle.value != null) {
-      subtitles = [appModel.currentSubtitle.value!];
+      subtitles ??= [appModel.currentSubtitle.value!];
       debugPrint('[Mining:audio] Using currentSubtitle');
     }
 

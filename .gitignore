@@ -44,3 +44,6 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 local_fixes/media_cast_dlna/
+
+# Claude Code local config (contém IPs/creds)
+CLAUDE.md
