@@ -354,7 +354,8 @@ class _PlayerSourcePageState extends BaseSourcePageState<PlayerSourcePage>
 
     // Seed duration from known metadata so the progress slider is usable
     // immediately. VLC takes time to parse duration from network streams.
-    // The listener will overwrite with the real VLC duration once available.
+    // The listener() at tick-time preserves this seed (does NOT overwrite
+    // with Duration.zero from the player) until VLC reports the real duration.
     if (_playerController.duration == Duration.zero && widget.item!.duration > 0) {
       _durationNotifier.value = Duration(seconds: widget.item!.duration);
       debugPrint('[Player] Seeded duration from metadata: ${widget.item!.duration}s');
@@ -594,16 +595,33 @@ class _PlayerSourcePageState extends BaseSourcePageState<PlayerSourcePage>
     }
 
     if (_playerController.isInitialized) {
-      if (_durationNotifier.value == Duration.zero) {
+      // ── Duration: prefer player's value, but keep seed as fallback ─────
+      // VLC may report Duration.zero for network streams before parsing the
+      // container metadata. If we already seeded from Jellyfin API metadata
+      // (widget.item!.duration), don't throw it away.
+      final playerDuration = _playerController.duration;
+      if (playerDuration > Duration.zero) {
+        // Player has a real duration — use it and update item metadata.
+        if (_durationNotifier.value != playerDuration) {
+          debugPrint(
+            '[Player] Duration from player: ${playerDuration.inSeconds}s '
+            '(was ${_durationNotifier.value.inSeconds}s)',
+          );
+        }
+        _durationNotifier.value = playerDuration;
         appModel.audioHandler?.mediaItem.add(
           appModel.audioHandler?.mediaItem.value?.copyWith.call(
-            duration: _playerController.duration,
+            duration: playerDuration,
           ),
         );
+      } else if (_durationNotifier.value == Duration.zero &&
+          widget.item?.duration != null &&
+          widget.item!.duration > 0) {
+        // Player hasn't reported duration yet — re-seed from metadata.
+        _durationNotifier.value = Duration(seconds: widget.item!.duration);
       }
 
       _positionNotifier.value = _playerController.position;
-      _durationNotifier.value = _playerController.duration;
       _playingNotifier.value = _playerController.isPlaying;
       _endedNotifier.value = _playerController.isEnded;
 

@@ -1,6 +1,7 @@
 import 'dart:async';
-import 'dart:io';
 
+import 'package:dlna_dart/dlna.dart';
+import 'package:dlna_dart/xmlParser.dart';
 import 'package:flutter/foundation.dart';
 
 import 'cast_models.dart';
@@ -8,165 +9,144 @@ import 'multicast_lock.dart';
 
 /// Discovers DLNA/UPnP MediaRenderer devices via SSDP multicast.
 ///
-/// Sends M-SEARCH requests on 239.255.255.250:1900 for known search targets
-/// and collects responses into [DiscoveredDevice] models. Uses [MulticastLockHolder]
-/// on Android to ensure multicast packets reach the WiFi driver.
+/// Uses [DLNAManager] from the `dlna_dart` package which provides:
 ///
-/// Replaces the old inline SSDP code in [DeviceDiscovery] with a dedicated,
-/// testable service — ready to swap for jUPnP (via media_cast_dlna) when
-/// Flutter is upgraded beyond 3.13.5.
+/// 1. **M-SEARCH** — active discovery on 239.255.255.250:1900
+/// 2. **NOTIFY listener** — passive discovery (devices that advertise themselves)
+/// 3. **Device XML parsing** — fetches and parses device descriptions
+///
+/// Results are converted to [DiscoveredDevice] models and merged with
+/// Chromecast / Jellyfin results in [DeviceDiscovery].
+///
+/// The [MulticastLockHolder] is acquired on Android to ensure multicast
+/// packets reach the WiFi driver.
 class DlnaDiscoveryService {
-  static const _multicastAddress = '239.255.255.250';
-  static const _multicastPort = 1900;
-  static const _searchTargets = [
-    'urn:dial-multiscreen-org:service:dial:1',
-    'urn:schemas-upnp-org:device:MediaRenderer:1',
-    'urn:schemas-upnp-org:device:MediaServer:1',
-    'ssdp:all',
-  ];
-
   final Duration timeout;
 
   DlnaDiscoveryService({this.timeout = const Duration(seconds: 8)});
 
-  /// Starts SSDP discovery and returns found [DiscoveredDevice]s.
+  DLNAManager? _manager;
+  DeviceManager? _deviceManager;
+
+  /// Starts SSDP discovery using [DLNAManager] and returns found devices.
+  ///
+  /// The [DLNAManager] sends periodic M-SEARCH probes AND listens for NOTIFY
+  /// announcements — covering devices that don't respond to M-SEARCH.
   Future<List<DiscoveredDevice>> discover() async {
-    debugPrint('[DlnaDiscovery] Starting SSDP discovery...');
+    debugPrint('[DlnaDiscovery] Starting SSDP discovery via dlna_dart...');
     await MulticastLockHolder.acquire();
     try {
-      final devices = await _discoverSsdp();
-      debugPrint('[DlnaDiscovery] SSDP scan complete: ${devices.length} devices');
-      for (final d in devices) {
-        debugPrint('[DlnaDiscovery]   "${d.name}" type=${d.type} ip=${d.ip}');
+      _manager = DLNAManager();
+      _deviceManager = await _manager!.start(reusePort: true);
+
+      final devices = <String, DiscoveredDevice>{};
+
+      final subscription = _deviceManager!.devices.stream.listen((map) {
+        for (final entry in map.entries) {
+          final dlnaDevice = entry.value;
+          final converted = _convertDevice(dlnaDevice);
+          devices.putIfAbsent(converted.ip, () => converted);
+        }
+      });
+
+      // Wait for the discovery timeout, then collect results.
+      await Future.delayed(timeout);
+
+      await subscription.cancel();
+      await stop();
+
+      debugPrint(
+        '[DlnaDiscovery] SSDP scan complete: ${devices.length} devices',
+      );
+      for (final d in devices.values) {
+        debugPrint(
+          '[DlnaDiscovery]   "${d.name}" type=${d.type} ip=${d.ip}',
+        );
       }
-      return devices;
+
+      return devices.values.toList();
+    } catch (e) {
+      debugPrint('[DlnaDiscovery] Error: $e');
+      await stop();
+      return [];
     } finally {
       await MulticastLockHolder.release();
     }
   }
 
-  Future<List<DiscoveredDevice>> _discoverSsdp() async {
-    final devices = <String, DiscoveredDevice>{};
-    RawDatagramSocket? socket;
-    try {
-      socket = await RawDatagramSocket.bind(InternetAddress.anyIPv4, 0);
-    } catch (_) {
-      return [];
-    }
-
-    for (final st in _searchTargets) {
-      final m = 'M-SEARCH * HTTP/1.1\r\n'
-          'HOST: $_multicastAddress:$_multicastPort\r\n'
-          'MAN: "ssdp:discover"\r\n'
-          'MX: 2\r\n'
-          'ST: $st\r\n'
-          '\r\n';
-      try {
-        socket.send(m.codeUnits, InternetAddress(_multicastAddress), _multicastPort);
-      } catch (_) {}
-      await Future.delayed(const Duration(milliseconds: 200));
-    }
-
-    final completer = Completer<void>();
-    Timer(timeout, () {
-      if (!completer.isCompleted) completer.complete();
-    });
-
-    socket.listen((event) {
-      if (event == RawSocketEvent.read) {
-        final dg = socket?.receive();
-        if (dg != null) {
-          final d = _parseSsdpResponse(
-            String.fromCharCodes(dg.data),
-            dg.address.address,
-          );
-          if (d != null) devices.putIfAbsent(d.ip, () => d);
-        }
-      }
-    }, onDone: () {
-      if (!completer.isCompleted) completer.complete();
-    });
-
-    await completer.future;
-    try { socket.close(); } catch (_) {}
-    return devices.values.toList();
+  /// Stops discovery and releases resources.
+  Future<void> stop() async {
+    _manager?.stop();
+    _manager = null;
+    _deviceManager = null;
   }
 
-  DiscoveredDevice? _parseSsdpResponse(String response, String ip) {
-    if (!response.contains('200 OK')) return null;
-    final headers = _parseHeaders(response);
-    final loc = headers['location'] ?? '';
-    final srv = (headers['server'] ?? '').toLowerCase();
-    final usn = headers['usn'] ?? '';
-    final st = headers['st'] ?? '';
+  /// Converts a [DLNADevice] (from dlna_dart) to our [DiscoveredDevice] model.
+  DiscoveredDevice _convertDevice(DLNADevice device) {
+    final info = device.info;
+    final name = info.friendlyName;
+    final server = _serverInfoFromDevice(info);
 
-    String type;
-    CastDeviceIcon icon;
-    if (st.contains('dial') || srv.contains('chromecast') || srv.contains('google cast')) {
-      type = 'Google Cast';
-      icon = CastDeviceIcon.cast;
-    } else if (srv.contains('amazon') || srv.contains('fire') || srv.contains('aft')) {
-      type = 'Fire TV';
-      icon = CastDeviceIcon.tv;
-    } else if (srv.contains('roku')) {
-      type = 'Roku';
-      icon = CastDeviceIcon.tv;
-    } else if (srv.contains('samsung') || srv.contains('tizen')) {
-      type = 'Samsung TV';
-      icon = CastDeviceIcon.tv;
-    } else if (srv.contains('lg') || srv.contains('webos')) {
-      type = 'LG TV';
-      icon = CastDeviceIcon.tv;
-    } else if (srv.contains('android')) {
-      type = 'Android TV';
-      icon = CastDeviceIcon.tv;
-    } else if (srv.contains('xbox')) {
-      type = 'Xbox';
-      icon = CastDeviceIcon.game;
-    } else if (srv.contains('playstation') || srv.contains('ps4') || srv.contains('ps5')) {
-      type = 'PlayStation';
-      icon = CastDeviceIcon.game;
-    } else {
-      type = 'Smart TV / Cast Device';
-      icon = CastDeviceIcon.tv;
-    }
+    // Determine device type from manufacturer / model info.
+    final type = _deviceType(name, server);
 
     return DiscoveredDevice(
-      name: _deviceName(srv, usn, ip),
+      name: name,
       type: type,
-      iconType: icon,
-      ip: ip,
-      locationUrl: loc.isNotEmpty ? loc : null,
-      serverInfo: srv.isNotEmpty ? srv : null,
-      isChromecast: type == 'Google Cast',
+      iconType: _iconForType(type),
+      ip: Uri.tryParse(info.URLBase)?.host ?? '',
+      locationUrl: info.URLBase,
+      serverInfo: server,
+      dlnaDevice: device,
     );
   }
 
-  Map<String, String> _parseHeaders(String response) {
-    final m = <String, String>{};
-    for (final l in response.split('\r\n')) {
-      final ci = l.indexOf(':');
-      if (ci > 0) {
-        m[l.substring(0, ci).trim().toLowerCase()] = l.substring(ci + 1).trim();
-      }
-    }
-    return m;
+  /// Extracts a server-like identifier from device info for type detection.
+  String _serverInfoFromDevice(DeviceInfo info) {
+    // Use deviceType as a fallback identifier (e.g.
+    // "urn:schemas-upnp-org:device:MediaRenderer:1").
+    return info.deviceType.toLowerCase();
   }
 
-  String _deviceName(String server, String usn, String ip) {
-    if (usn.isNotEmpty) {
-      final ps = usn.split('::');
-      if (ps.length >= 2) {
-        final u = ps[0].replaceAll('uuid:', '');
-        if (u.isNotEmpty && u.length < 30) return u;
-      }
+  /// Classifies a device by its name and server metadata.
+  String _deviceType(String name, String server) {
+    final s = server;
+    if (s.contains('chromecast') ||
+        s.contains('google cast') ||
+        name.toLowerCase().contains('chromecast')) {
+      return 'Google Cast';
     }
-    if (server.isNotEmpty) {
-      final p = server.split(' ').first.split('/').first;
-      if (p.isNotEmpty && p.length > 2) return p;
+    if (s.contains('amazon') || s.contains('fire') || s.contains('aft')) {
+      return 'Fire TV';
     }
-    return 'Device ($ip)';
+    if (s.contains('roku')) {
+      return 'Roku';
+    }
+    if (s.contains('samsung') || s.contains('tizen')) {
+      return 'Samsung TV';
+    }
+    if (s.contains('lg') || s.contains('webos')) {
+      return 'LG TV';
+    }
+    if (s.contains('android')) {
+      return 'Android TV';
+    }
+    if (s.contains('xbox')) {
+      return 'Xbox';
+    }
+    if (s.contains('playstation') || s.contains('ps4') || s.contains('ps5')) {
+      return 'PlayStation';
+    }
+    return 'Smart TV / Cast Device';
   }
 
-  void dispose() {}
+  CastDeviceIcon _iconForType(String type) {
+    if (type == 'Google Cast') return CastDeviceIcon.cast;
+    if (type == 'Xbox' || type == 'PlayStation') return CastDeviceIcon.game;
+    return CastDeviceIcon.tv;
+  }
+
+  void dispose() {
+    stop();
+  }
 }

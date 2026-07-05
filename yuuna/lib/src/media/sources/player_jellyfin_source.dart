@@ -40,6 +40,7 @@ class PlayerJellyfinSource extends PlayerMediaSource {
   final Map<String, List<server_core.MediaItem>> _browseCache = {};
   final Map<String, server_core.MediaItem> _itemCache = {};
   final Map<String, String> _subtitleCache = {};
+  bool _isDiscovering = false;
 
   bool get isLoggedIn => _client?.accessToken != null && _client?.userId != null;
   server_jellyfin.JellyfinMediaServerClient? get serverClient => _client;
@@ -50,6 +51,34 @@ class PlayerJellyfinSource extends PlayerMediaSource {
   }
 
   // ─── Connection Management ─────────────────────────────────────────────
+
+  /// Fallback URL used when the primary server is unreachable via WiFi
+  /// (e.g., router wireless isolation). Requires `adb reverse tcp:8096 tcp:8096`.
+  static const _fallbackUrl = 'http://127.0.0.1:8096';
+
+  /// Tries a connection with the given [url]. If it fails with a network error,
+  /// automatically falls back to [_fallbackUrl] (adb reverse tunnel).
+  Future<bool> _tryRestore(String url, String token, String uid) async {
+    _client = server_jellyfin.JellyfinMediaServerClient(
+      baseUrl: url,
+      deviceInfo: _deviceInfo,
+      accessToken: token,
+      userId: uid,
+    );
+    try {
+      await _client!.itemsApi.getViews();
+      debugPrint('[Jellyfin] ✅ Session restored to $url');
+      return true;
+    } on SocketException {
+      debugPrint('[Jellyfin] ⚠️ Network unreachable: $url');
+      _client = null;
+      return false;
+    } catch (e) {
+      debugPrint('[Jellyfin] ❌ Session restore failed: $e');
+      _client = null;
+      return false;
+    }
+  }
 
   Future<bool> restoreSession() async {
     // Ensure the source is initialised before accessing preferences.
@@ -64,25 +93,19 @@ class PlayerJellyfinSource extends PlayerMediaSource {
       return false;
     }
 
-    _client = server_jellyfin.JellyfinMediaServerClient(
-      baseUrl: url,
-      deviceInfo: _deviceInfo,
-      accessToken: token,
-      userId: uid,
-    );
-    try {
-      await _client!.itemsApi.getViews();
-      debugPrint('[Jellyfin] ✅ Session restored to $url');
-      return true;
-    } catch (e) {
-      debugPrint('[Jellyfin] ❌ Session restore failed: $e');
-      _client = null;
-      return false;
+    // Try primary URL first.
+    if (await _tryRestore(url, token, uid)) return true;
+
+    // If primary failed with network error and it's a local IP, try adb tunnel.
+    if (url != _fallbackUrl) {
+      debugPrint('[Jellyfin] 🔄 Falling back to adb tunnel: $_fallbackUrl');
+      return await _tryRestore(_fallbackUrl, token, uid);
     }
+
+    return false;
   }
 
-  Future<bool> connectToServer(String url, String username, String password) async {
-    debugPrint('[Jellyfin] connectToServer: $url ($username)');
+  Future<bool> _tryConnect(String url, String username, String password) async {
     _client = server_jellyfin.JellyfinMediaServerClient(
       baseUrl: url,
       deviceInfo: _deviceInfo,
@@ -95,11 +118,30 @@ class PlayerJellyfinSource extends PlayerMediaSource {
       await setPreference<String?>(key: 'jellyfin_access_token', value: r.accessToken);
       await setPreference<String?>(key: 'jellyfin_user_id', value: r.userId);
       return true;
+    } on SocketException {
+      debugPrint('[Jellyfin] ⚠️ Network unreachable: $url');
+      _client = null;
+      return false;
     } catch (e) {
       debugPrint('[Jellyfin] ❌ Auth failed: $e');
       _client = null;
       rethrow;
     }
+  }
+
+  Future<bool> connectToServer(String url, String username, String password) async {
+    debugPrint('[Jellyfin] connectToServer: $url ($username)');
+
+    // Try primary URL first.
+    if (await _tryConnect(url, username, password)) return true;
+
+    // If primary failed with network error and it's a local IP, try adb tunnel.
+    if (url != _fallbackUrl) {
+      debugPrint('[Jellyfin] 🔄 Falling back to adb tunnel: $_fallbackUrl');
+      return await _tryConnect(_fallbackUrl, username, password);
+    }
+
+    return false;
   }
 
   Future<void> disconnect() async {
@@ -387,6 +429,9 @@ class PlayerJellyfinSource extends PlayerMediaSource {
     MediaItem item,
   ) async {
     debugPrint('[Cast+Mine] Starting cast flow for: ${item.title}');
+    if (_isDiscovering) { debugPrint('[Cast+Mine] ⚠️ Already discovering, ignoring duplicate click.'); return; }
+    _isDiscovering = true;
+    Timer(const Duration(seconds: 15), () => _isDiscovering = false);
     try {
       final jItem = await _c.itemsApi.getItem(item.mediaIdentifier);
 
@@ -481,6 +526,7 @@ class PlayerJellyfinSource extends PlayerMediaSource {
           streamUrl: streamUrl,
           deviceLocationUrl: target.ssdpDevice!.locationUrl!,
           deviceName: target.ssdpDevice!.name,
+          dlnaDevice: target.ssdpDevice!.dlnaDevice,
         );
         if (ctrl == null) {
           debugPrint('[Cast+Mine] ❌ DLNA connection failed!');
@@ -540,6 +586,7 @@ class PlayerJellyfinSource extends PlayerMediaSource {
           SnackBar(content: Text('Cast failed: $e')));
       }
     }
+      _isDiscovering = false;
   }
 
   // ─── Image / Audio Generation (Mining) ──────────────────────────────────

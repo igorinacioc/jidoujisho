@@ -23,6 +23,7 @@ class JellyfinPlaybackApi implements PlaybackApi {
     final params = <String, String>{
       'MediaSourceId': mediaSourceId,
       'ApiKey': _token,
+      'Static': 'true', // Direct play — preserves all audio tracks, no transcode delay.
     };
     if (deviceId != null) params['DeviceId'] = deviceId;
     if (audioCodec != null) params['AudioCodec'] = audioCodec;

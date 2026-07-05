@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:dlna_dart/dlna.dart';
 import 'package:server_core/server_core.dart';
 import 'package:yuuna/cast/chromecast_discovery.dart';
 
@@ -73,6 +74,12 @@ class DiscoveredDevice {
   /// Whether this device was discovered via mDNS as a Google Cast device.
   final bool isChromecast;
 
+  /// The pre-parsed [DLNADevice] from the `dlna_dart` discovery, if available.
+  ///
+  /// When set, [DlnaController] can skip the device-description XML fetch
+  /// and use [dlnaDevice] directly for SOAP control (including volume/mute).
+  final DLNADevice? dlnaDevice;
+
   const DiscoveredDevice({
     required this.name,
     required this.type,
@@ -82,6 +89,7 @@ class DiscoveredDevice {
     this.serverInfo,
     this.port,
     this.isChromecast = false,
+    this.dlnaDevice,
   });
 }
 
