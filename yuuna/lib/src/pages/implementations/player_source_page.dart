@@ -1519,10 +1519,10 @@ class _PlayerSourcePageState extends BaseSourcePageState<PlayerSourcePage>
             onChanged: durationLoaded && validPosition
                 ? (progress) {
                     cancelHideTimer();
-
                     sliderValue = progress.floor().toDouble();
-                    _playerController.setTime(sliderValue.toInt() * 1000);
-                    _listeningSubtitle.value = getNearestSubtitle();
+                    // Don't seek on every drag tick — only on drag end.
+                    // VLC gets overwhelmed with rapid setTime() calls on
+                    // network streams (especially direct-play / Static=true).
                     _autoPauseNotifier.value = null;
                     _autoPauseMemory = null;
                   }
@@ -1536,7 +1536,11 @@ class _PlayerSourcePageState extends BaseSourcePageState<PlayerSourcePage>
                   }
                 : null,
             onChangeEnd: durationLoaded && validPosition
-                ? (value) {
+                ? (value) async {
+                    // Seek once at the final drop position.
+                    final wasPlaying = _playingNotifier.value;
+                    await _playerController.setTime(sliderValue.toInt() * 1000);
+                    _listeningSubtitle.value = getNearestSubtitle();
                     if (!_isMenuHidden.value) {
                       _menuHideTimer = Timer(const Duration(seconds: 3), () {
                         if (_playingNotifier.value) {
@@ -1546,6 +1550,11 @@ class _PlayerSourcePageState extends BaseSourcePageState<PlayerSourcePage>
                     }
                     _sliderBeingDragged = false;
                     _bufferingNotifier.value = true;
+                    // Explicitly resume playback after seek — VLC may pause
+                    // on network streams after setTime().
+                    if (wasPlaying) {
+                      await _playerController.play();
+                    }
                   }
                 : null,
           ),
