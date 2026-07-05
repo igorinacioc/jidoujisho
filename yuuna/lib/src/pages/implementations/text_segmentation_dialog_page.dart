@@ -179,16 +179,21 @@ class _TextSegmentationDialogPage
   }
 
   JidoujishoTextSelection get selection {
-    StringBuffer buffer = StringBuffer();
     int? start;
     int? end;
+    int searchPos = 0;
 
     for (int i = 0; i < _valuesSelected.length; i++) {
+      final segment = widget.segmentedText[i];
+      // Find the actual position of this segment in the source text.
+      final segPos = widget.sourceText.indexOf(segment, searchPos);
+      if (segPos < 0) continue;
+      searchPos = segPos + segment.length;
+
       if (_valuesSelected[i]!.value) {
-        start ??= buffer.length;
-        end = buffer.length + widget.segmentedText[i].length;
+        start ??= segPos;
+        end = searchPos;
       }
-      buffer.write(widget.segmentedText[i]);
     }
 
     TextRange range = TextRange.empty;

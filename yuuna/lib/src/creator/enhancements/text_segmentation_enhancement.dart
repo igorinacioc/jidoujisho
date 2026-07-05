@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fluttertoast/fluttertoast.dart';
@@ -29,8 +30,10 @@ class TextSegmentationEnhancement extends Enhancement {
     required EnhancementTriggerCause cause,
   }) async {
     String sourceText = creatorModel.getFieldController(field).text;
+    debugPrint('[TextSeg] sourceText="${sourceText.length > 50 ? "${sourceText.substring(0, 50)}..." : sourceText}" isEmpty=${sourceText.trim().isEmpty}');
 
     if (sourceText.trim().isEmpty) {
+      debugPrint('[TextSeg] ❌ Empty text — showing toast');
       Fluttertoast.showToast(
         msg: t.no_text,
         toastLength: Toast.LENGTH_SHORT,
@@ -39,6 +42,7 @@ class TextSegmentationEnhancement extends Enhancement {
       return;
     }
 
+    debugPrint('[TextSeg] field is SentenceField: ${field is SentenceField}');
     if (field is SentenceField) {
       await appModel.openTextSegmentationDialog(
         sourceText: sourceText,

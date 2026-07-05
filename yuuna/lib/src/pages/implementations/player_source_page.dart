@@ -568,12 +568,6 @@ class _PlayerSourcePageState extends BaseSourcePageState<PlayerSourcePage>
     });
 
     _session.setActive(true);
-    await _playerController.setSpuTrack(-1);
-
-    // Disable VLC native subtitle rendering — the app handles subtitles
-    // externally. With Static=true (direct play), MKV files have embedded
-    // subtitles that VLC would render on top of ours, causing duplication.
-    debugPrint('[Player] Disabled VLC native subtitles to avoid duplication.');
 
     debugPrint('[Player] ✅ Initialization complete.');
     setState(() {
@@ -593,6 +587,7 @@ class _PlayerSourcePageState extends BaseSourcePageState<PlayerSourcePage>
 
   Subtitle? _autoPauseMemory;
   bool _lastPlayingState = true;
+  bool _spuTrackDisabled = false;
 
   /// This is called each time the player ticks.
   void listener() async {
@@ -601,6 +596,18 @@ class _PlayerSourcePageState extends BaseSourcePageState<PlayerSourcePage>
     }
 
     if (_playerController.isInitialized) {
+      // Disable VLC native subtitle rendering — the app handles subtitles
+      // externally. Must be called AFTER the VLC view is created (isInitialized
+      // is true), not during initialisePlayer() when the view doesn't exist yet.
+      if (!_spuTrackDisabled) {
+        _spuTrackDisabled = true;
+        try {
+          await _playerController.setSpuTrack(-1);
+          debugPrint('[Player] Disabled VLC native subtitles to avoid duplication.');
+        } catch (_) {
+          _spuTrackDisabled = false; // Retry next tick if it failed.
+        }
+      }
       // ── Duration: prefer player's value, but keep seed as fallback ─────
       // VLC may report Duration.zero for network streams before parsing the
       // container metadata. If we already seeded from Jellyfin API metadata

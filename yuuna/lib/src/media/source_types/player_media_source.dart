@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_ffmpeg/flutter_ffmpeg.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_vlc_player/flutter_vlc_player.dart';
 import 'package:yuuna/cast/cast.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:intl/intl.dart';
@@ -121,25 +122,12 @@ abstract class PlayerMediaSource extends MediaSource {
     bool useCurrentTime = false;
     if (subtitles == null && _transcriptSubtitle != null) {
       subtitles = [_transcriptSubtitle!];
-      debugPrint('[Mining:img] Using _transcriptSubtitle (${subtitles.length} cues)');
     }
 
     if (subtitles == null && appModel.currentSubtitle.value != null) {
-      subtitles ??= [appModel.currentSubtitle.value!];
+      subtitles = [appModel.currentSubtitle.value!];
       useCurrentTime = true;
-      debugPrint('[Mining:img] Using currentSubtitle (useCurrentTime=true)');
     }
-
-    if (subtitles == null || subtitles.isEmpty) {
-      debugPrint('[Mining:img] ❌ No subtitles available — '
-          '_transcriptSubtitle=${_transcriptSubtitle != null} '
-          'currentSubtitle=${appModel.currentSubtitle.value != null} '
-          'currentPlayerController=${appModel.currentPlayerController != null}');
-      return [];
-    }
-
-    debugPrint('[Mining:img] Generating ${subtitles.length} image(s) from '
-        'mediaIdentifier=${item.mediaIdentifier.substring(0, item.mediaIdentifier.length < 80 ? item.mediaIdentifier.length : 80)}...');
 
     List<NetworkToFileImage> imageFiles = [];
     Directory appDirDoc = await getApplicationSupportDirectory();
@@ -154,7 +142,7 @@ abstract class PlayerMediaSource extends MediaSource {
     Directory imageDir = Directory('$playerPreviewPath/$dirTimestamp');
     imageDir.createSync();
 
-    for (int index = 0; index < subtitles.length; index++) {
+    for (int index = 0; index < subtitles!.length; index++) {
       Subtitle subtitle = subtitles[index];
       File imageFile = appModel.getPreviewImageFile(imageDir, index);
 
@@ -168,12 +156,10 @@ abstract class PlayerMediaSource extends MediaSource {
       int msMean = ((msStart + msEnd) / 2).floor();
       Duration currentTime = Duration(milliseconds: msMean);
 
-      // Null-safe: player may not exist during DLNA cast sessions.
       final playerController = appModel.currentPlayerController;
       if (useCurrentTime && playerController != null) {
         currentTime = Duration(
             milliseconds: playerController.value.position.inMilliseconds);
-        debugPrint('[Mining:img] Using current player position: ${currentTime.inSeconds}s');
       }
 
       String ffmpegTimestamp = JidoujishoTimeFormat.getFfmpegTimestamp(currentTime);
@@ -184,15 +170,12 @@ abstract class PlayerMediaSource extends MediaSource {
       }
 
       String command =
-          '-ss $ffmpegTimestamp -y -i "$inputPath" -frames:v 1 -q:v 2 "$outputPath';
+          '-ss $ffmpegTimestamp -y -i "$inputPath" -frames:v 1 -q:v 2 "$outputPath"';
 
-      debugPrint('[Mining:img] FFmpeg: $command');
       final FlutterFFmpeg flutterFFmpeg = FlutterFFmpeg();
       await flutterFFmpeg.execute(command);
 
       String output = await FlutterFFmpegConfig().getLastCommandOutput();
-      debugPrint('[Mining:img] FFmpeg output (${output.length} chars): '
-          '${output.substring(0, output.length < 120 ? output.length : 120)}');
 
       if (!output.contains('Output file is empty, nothing was encoded')) {
         while (!imageFile.existsSync()) {
@@ -203,13 +186,9 @@ abstract class PlayerMediaSource extends MediaSource {
             NetworkToFileImage(file: imageFile);
 
         imageFiles.add(networkToFileImage);
-        debugPrint('[Mining:img] ✅ Image saved: ${imageFile.path}');
-      } else {
-        debugPrint('[Mining:img] ❌ FFmpeg produced empty output for subtitle $index');
       }
     }
 
-    debugPrint('[Mining:img] Done: ${imageFiles.length}/${subtitles.length} images extracted');
     return imageFiles;
   }
 
@@ -228,11 +207,8 @@ abstract class PlayerMediaSource extends MediaSource {
     }
 
     if (appModel.isProcessingEmbeddedSubtitles) {
-      debugPrint('[Mining:audio] ⚠️ Blocked — embedded subtitles processing');
       return null;
     }
-
-    debugPrint('[Mining:audio] Starting audio extraction...');
 
     Directory appDirDoc = await getApplicationSupportDirectory();
     String playerPreviewPath = '${appDirDoc.path}/playerAudioPreview';
@@ -248,77 +224,55 @@ abstract class PlayerMediaSource extends MediaSource {
       audioFile.deleteSync();
     }
 
-    // ── Audio track index (null-safe for DLNA cast sessions) ─────────
-    int audioIndex = 0;
-    final playerController = appModel.currentPlayerController;
-    if (playerController != null) {
-      final embeddedTracks = await playerController.getAudioTracks();
-      audioIndex = await playerController.getAudioTrack() ?? 0;
-      for (int i = 0; i < embeddedTracks.length; i++) {
-        final entry = embeddedTracks.entries.elementAt(i);
-        if (audioIndex == entry.key) {
-          audioIndex = i;
-        }
+    String timeStart = '';
+    String timeEnd = '';
+
+    VlcPlayerController? playerController = appModel.currentPlayerController;
+    if (playerController == null) {
+      return null;
+    }
+    Map<int, String> embeddedTracks = await playerController.getAudioTracks();
+
+    int audioIndex = await playerController.getAudioTrack() ?? 0;
+    for (int i = 0; i < embeddedTracks.length; i++) {
+      MapEntry<int, String> entry = embeddedTracks.entries.elementAt(i);
+      if (audioIndex == entry.key) {
+        audioIndex = i;
       }
-      debugPrint('[Mining:audio] Audio index=$audioIndex tracks=${embeddedTracks.length}');
-    } else {
-      debugPrint('[Mining:audio] ⚠️ No VLC player controller — using audioIndex=0');
     }
 
-    // ── Subtitle selection ───────────────────────────────────────────
-    final allowance = Duration(milliseconds: options!.audioAllowance);
-    final delay = Duration(milliseconds: options.subtitleDelay);
+    Duration allowance = Duration(milliseconds: options!.audioAllowance);
+    Duration delay = Duration(milliseconds: options.subtitleDelay);
 
     if (subtitles == null && _transcriptSubtitle != null) {
       subtitles = [_transcriptSubtitle!];
-      debugPrint('[Mining:audio] Using _transcriptSubtitle (${subtitles.length} cues)');
     }
 
     if (subtitles == null && appModel.currentSubtitle.value != null) {
-      subtitles ??= [appModel.currentSubtitle.value!];
-      debugPrint('[Mining:audio] Using currentSubtitle');
+      subtitles = [appModel.currentSubtitle.value!];
     }
 
-    if (subtitles == null || subtitles.isEmpty) {
-      debugPrint('[Mining:audio] ❌ No subtitles available — '
-          '_transcriptSubtitle=${_transcriptSubtitle != null} '
-          'currentSubtitle=${appModel.currentSubtitle.value != null} '
-          'playerController=${playerController != null}');
-      return null;
-    }
-
-    final adjustedStart = subtitles.first.start - delay - allowance;
-    final adjustedEnd = subtitles.last.end - delay + allowance;
-    final timeStart = JidoujishoTimeFormat.getFfmpegTimestamp(adjustedStart);
-    final timeEnd = JidoujishoTimeFormat.getFfmpegTimestamp(adjustedEnd);
-
-    debugPrint('[Mining:audio] Range: $timeStart → $timeEnd '
-        '(allowance=${allowance.inMilliseconds}ms delay=${delay.inMilliseconds}ms)');
+    Duration adjustedStart = subtitles!.first.start - delay - allowance;
+    Duration adjustedEnd = subtitles.last.end - delay + allowance;
+    timeStart = JidoujishoTimeFormat.getFfmpegTimestamp(adjustedStart);
+    timeEnd = JidoujishoTimeFormat.getFfmpegTimestamp(adjustedEnd);
 
     String inputPath = item.mediaIdentifier;
 
     MediaSource source = item.getMediaSource(appModel: appModel);
     if (source is PlayerYoutubeSource) {
       inputPath =
-          await source.getAudioExportUrl(item, playerController?.dataSource ?? '');
+          await source.getAudioExportUrl(item, playerController.dataSource);
       audioIndex = 0;
     }
 
     String command =
         '-ss $timeStart -to $timeEnd -y -i "$inputPath" -map 0:a:$audioIndex "$outputPath"';
 
-    debugPrint('[Mining:audio] FFmpeg: $command');
     final FlutterFFmpeg flutterFFmpeg = FlutterFFmpeg();
     await flutterFFmpeg.execute(command);
 
-    if (audioFile.existsSync()) {
-      debugPrint('[Mining:audio] ✅ Audio saved: ${audioFile.path} '
-          '(${(audioFile.lengthSync() / 1024).toStringAsFixed(1)} KB)');
-      return audioFile;
-    } else {
-      debugPrint('[Mining:audio] ❌ Audio file not created');
-      return null;
-    }
+    return audioFile;
   }
 
   /// Open the [PlayerSettingsDialogPage].

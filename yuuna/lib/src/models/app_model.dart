@@ -2643,21 +2643,54 @@ class AppModel with ChangeNotifier {
     Function(JidoujishoTextSelection)? onSelect,
     Function(JidoujishoTextSelection)? onSearch,
   }) async {
-    if (sourceText.trim().isEmpty) {
+    debugPrint('[TextSeg:Dialog] Called with sourceText length=${sourceText.length}');
+
+    // Strip HTML tags from subtitle text (e.g. <i>, <b>, <font>).
+    String cleanText = sourceText.replaceAll(RegExp(r'<[^>]*>'), '').trim();
+    debugPrint('[TextSeg:Dialog] Clean text (no HTML): "${cleanText.length > 60 ? "${cleanText.substring(0, 60)}..." : cleanText}"');
+
+    if (cleanText.isEmpty) {
+      debugPrint('[TextSeg:Dialog] ❌ Clean text is empty — returning');
       return;
     }
 
-    segmentedText ??= targetLanguage.textToWords(sourceText);
+    if (segmentedText == null) {
+      try {
+        segmentedText = targetLanguage.textToWords(cleanText);
+        debugPrint('[TextSeg:Dialog] textToWords returned ${segmentedText.length} words');
+      } catch (e) {
+        debugPrint('[TextSeg:Dialog] ❌ textToWords threw: $e');
+        return;
+      }
 
+      // Fallback: if MeCab (Japanese) returns nothing for non-Japanese text,
+      // split by spaces/punctuation so the user can still tap words.
+      if (segmentedText.isEmpty) {
+        debugPrint('[TextSeg:Dialog] ⚠️ textToWords returned empty — using space-based fallback');
+        segmentedText = cleanText
+            .split(RegExp(r'[\s\-—]+'))
+            .where((w) => w.isNotEmpty)
+            .toList();
+        debugPrint('[TextSeg:Dialog] Fallback split: ${segmentedText.length} words');
+      }
+    }
+
+    if (segmentedText.isEmpty) {
+      debugPrint('[TextSeg:Dialog] ❌ No words to segment — returning');
+      return;
+    }
+
+    debugPrint('[TextSeg:Dialog] Opening dialog with ${segmentedText.length} words...');
     await showDialog(
       context: _navigatorKey.currentContext!,
       builder: (context) => TextSegmentationDialogPage(
-        sourceText: sourceText,
+        sourceText: cleanText,
         segmentedText: segmentedText!,
         onSelect: onSelect,
         onSearch: onSearch,
       ),
     );
+    debugPrint('[TextSeg:Dialog] Dialog closed');
   }
 
   /// A helper function for opening an example sentence dialog.
