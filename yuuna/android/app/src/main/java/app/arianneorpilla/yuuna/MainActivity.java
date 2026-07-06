@@ -139,7 +139,7 @@ public class MainActivity extends AudioServiceActivity {
         }
 
         long modelId = mAnkiDroid.findModelIdByName(model, fields.size());
-       
+
         Set<String> allTags = new HashSet<>(Arrays.asList("Yuuna"));
         allTags.addAll(tags);
 
@@ -148,6 +148,36 @@ public class MainActivity extends AudioServiceActivity {
         System.out.println("Added note via flutter_ankidroid_api");
         System.out.println("Model: " + modelId);
         System.out.println("Deck: " + deckId);
+    }
+
+    /// Tries to trigger AnkiDroid sync via intent, then falls back to
+    /// simply opening AnkiDroid so the user can tap Sync manually.
+    private void requestSync() {
+        try {
+            // Method 1: AnkiDroid's internal sync broadcast (most reliable).
+            Intent syncIntent = new Intent("com.ichi2.anki.intent.action.SYNC");
+            syncIntent.setPackage("com.ichi2.anki");
+            if (syncIntent.resolveActivity(getPackageManager()) != null) {
+                startActivity(syncIntent);
+                System.out.println("Triggered AnkiDroid sync via intent");
+                return;
+            }
+        } catch (Exception e) {
+            System.out.println("Sync intent failed, falling back to open: " + e.getMessage());
+        }
+
+        try {
+            // Method 2: Open AnkiDroid via launch intent.
+            Intent launchIntent = getPackageManager()
+                .getLaunchIntentForPackage("com.ichi2.anki");
+            if (launchIntent != null) {
+                launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                startActivity(launchIntent);
+                System.out.println("Opened AnkiDroid for manual sync");
+            }
+        } catch (Exception e) {
+            System.out.println("Failed to open AnkiDroid: " + e.getMessage());
+        }
     }
 
     @Override
@@ -214,6 +244,10 @@ public class MainActivity extends AudioServiceActivity {
                         case "addNote":
                             addNote(model, deck, fields, tags);
                             result.success("Added note");
+                            break;
+                        case "requestSync":
+                            requestSync();
+                            result.success(true);
                             break;
                         case "checkForDuplicates":
                             if (mAnkiDroid.shouldRequestPermission()) {

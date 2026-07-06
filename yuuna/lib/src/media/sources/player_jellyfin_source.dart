@@ -429,154 +429,75 @@ class PlayerJellyfinSource extends PlayerMediaSource {
     MediaItem item,
   ) async {
     debugPrint('[Cast+Mine] Starting cast flow for: ${item.title}');
-    if (_isDiscovering) { debugPrint('[Cast+Mine] ⚠️ Already discovering, ignoring duplicate click.'); return; }
+    if (_isDiscovering) {
+      debugPrint('[Cast+Mine] ⚠️ Already discovering, ignoring duplicate click.');
+      return;
+    }
     _isDiscovering = true;
-    Timer(const Duration(seconds: 15), () => _isDiscovering = false);
-    try {
-      final jItem = await _c.itemsApi.getItem(item.mediaIdentifier);
 
-      // Discover.
-      debugPrint('[Cast+Mine] Discovering devices...');
-      final discovery = DeviceDiscovery(_c.sessionApi);
-      final devices = await discovery.discover();
-      debugPrint('[Cast+Mine] Found ${devices.length} cast targets');
-      if (devices.isEmpty) {
-        debugPrint('[Cast+Mine] ❌ No devices found!');
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('No cast devices found.')),
-          );
+    try {
+      // ─── Phase 1: Show picker immediately + start discovery in background ───
+      // This mirrors YouTube's Cast dialog: opens instantly, devices appear
+      // as they're found. No more 8-second blank wait.
+
+      debugPrint('[Cast+Mine] Opening picker + starting discovery...');
+
+      // Stream controller for device updates — survives refresh.
+      final deviceController = StreamController<List<CastTarget>>.broadcast();
+
+      void startDiscovery({bool clearCache = false}) {
+        if (clearCache) {
+          // Force fresh scan — don't emit cached results on refresh.
+          DeviceDiscovery.clearCache();
         }
-        return;
+        final d = DeviceDiscovery(_c.sessionApi);
+        d.discoverIncremental().listen(
+          (devices) {
+            if (!deviceController.isClosed) deviceController.add(devices);
+          },
+          onDone: () {
+            if (!deviceController.isClosed) deviceController.close();
+          },
+        );
       }
 
-      if (!context.mounted) return;
-      final target = await DevicePicker.show(context: context, devices: devices);
+      startDiscovery();
+
+      // Fetch item metadata concurrently (needed after selection).
+      final jItemFuture = _c.itemsApi.getItem(item.mediaIdentifier);
+
+      if (!context.mounted) { _isDiscovering = false; return; }
+
+      // Show picker immediately with cached devices + live stream.
+      // Fully draggable: down to dismiss, up to expand. Refresh button re-scans.
+      final target = await DevicePicker.show(
+        context: context,
+        initialDevices: DeviceDiscovery.cachedDevices,
+        deviceStream: deviceController.stream,
+        onRefresh: () => startDiscovery(clearCache: true),
+      );
+      _isDiscovering = false;
+      deviceController.close();
+
       if (target == null) return;
 
-      final extra = jsonDecode(item.extra ?? '{}') as Map<String, dynamic>;
-      var msId = extra['mediaSourceId'] as String? ?? '';
-      if (msId.isEmpty) msId = jItem.mediaSources.isNotEmpty ? jItem.mediaSources.first.id : '';
-      if (msId.isEmpty) throw Exception('No media source.');
+      debugPrint('[Cast+Mine] User selected: ${target.name}');
 
-      // Subtitles.
-      final subs = <SubtitleItem>[];
-      try {
-        final service = SubtitleService(
-          (iid, sid, idx) => _c.playbackApi.getSubtitleContent(iid, sid, idx),
-        );
-        subs.addAll(await service.loadSubtitles(
-          itemId: item.mediaIdentifier,
-          subtitleStreams: jItem.mediaStreams
-              .where((s) => s.type == 'Subtitle')
-              .map((s) => SubtitleStreamMeta(
-                    index: s.index, codec: s.codec,
-                    displayTitle: s.displayTitle, language: s.language,
-                    isExternal: s.isExternal ?? false, deliveryUrl: s.deliveryUrl,
-                  ))
-              .toList(),
-          mediaSourceId: msId,
-        ));
-      } catch (_) {}
+      // ─── Phase 2: Push connecting page immediately, connect in background ───
+      // No white screen — the user sees a black page with "Connecting..." spinner
+      // while we load subtitles and establish the cast session.
 
-      // Chromecast (Google Cast via mDNS / CastV2 protocol).
-      if (target.isChromecast) {
-        debugPrint('[Cast+Mine] → Chromecast path: ${target.name}');
-        final chromecastDevice = target.chromecastDevice ??
-            ChromecastDevice(
-              name: target.ssdpDevice?.name ?? target.name,
-              host: target.ssdpDevice?.ip ?? '',
-              port: target.ssdpDevice?.port ?? 8009,
-              id: target.ssdpDevice?.ip ?? '',
-            );
-
-        final streamUrl = _c.playbackApi.getStreamUrl(item.mediaIdentifier, msId);
-        debugPrint('[Cast+Mine] Stream URL: $streamUrl');
-        final ctrl = await ChromecastController.connect(
-          device: chromecastDevice,
-          streamUrl: streamUrl,
-          contentType: 'video/mp4',
-          title: item.title ?? target.name,
-        );
-        if (ctrl == null) {
-          debugPrint('[Cast+Mine] ❌ Chromecast connection failed!');
-          if (context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Chromecast connection failed.')));
-          }
-          return;
-        }
-        debugPrint('[Cast+Mine] ✅ Chromecast connected, opening MiningModePage');
-        if (!context.mounted) return;
-        await Navigator.of(context).push(MaterialPageRoute(
-          builder: (ctx) => MiningModePage(
-            castSession: ctrl, subtitles: subs,
-            onExitMining: () async { await ctrl.stop(); Navigator.pop(ctx); },
-            appModel: appModel,
-          ),
-        ));
-        return;
-      }
-
-      // DLNA (UPnP / SOAP — CDATA fix applied).
-      if (target.isDlna && target.ssdpDevice?.locationUrl != null) {
-        debugPrint('[Cast+Mine] → DLNA path: ${target.name}');
-        final streamUrl = _c.playbackApi.getStreamUrl(item.mediaIdentifier, msId);
-        final ctrl = await DlnaController.connect(
-          streamUrl: streamUrl,
-          deviceLocationUrl: target.ssdpDevice!.locationUrl!,
-          deviceName: target.ssdpDevice!.name,
-          dlnaDevice: target.ssdpDevice!.dlnaDevice,
-        );
-        if (ctrl == null) {
-          debugPrint('[Cast+Mine] ❌ DLNA connection failed!');
-          if (context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('DLNA connection failed.')));
-          }
-          return;
-        }
-        debugPrint('[Cast+Mine] ✅ DLNA connected, opening MiningModePage');
-        if (!context.mounted) return;
-        await Navigator.of(context).push(MaterialPageRoute(
-          builder: (ctx) => MiningModePage(
-            castSession: ctrl, subtitles: subs,
-            onExitMining: () async { await ctrl.stop(); Navigator.pop(ctx); },
-            appModel: appModel,
-          ),
-        ));
-        return;
-      }
-
-      // Jellyfin cast.
-      if (!target.isJellyfin || target.jellyfinDevice == null) {
-        debugPrint('[Cast+Mine] ❌ Invalid target: not Jellyfin-compatible');
-        if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Invalid cast target.')));
-        return;
-      }
-      debugPrint('[Cast+Mine] → Jellyfin cast path: ${target.jellyfinDevice!.name}');
-      final dev = target.jellyfinDevice!;
-      final controller = CastController(
-        sessionApi: _c.sessionApi,
-        deviceId: dev.id,
-        deviceName: dev.name,
-      );
-      final ok = await controller.startPlayback(itemId: item.mediaIdentifier, mediaSourceId: msId);
-      if (!ok) {
-        debugPrint('[Cast+Mine] ❌ startPlayback failed for device ${dev.id}');
-        if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not start playback on TV.')));
-        return;
-      }
-      debugPrint('[Cast+Mine] ✅ Jellyfin cast started, opening MiningModePage');
-      await Future.delayed(const Duration(seconds: 2));
       if (!context.mounted) return;
+
       await Navigator.of(context).push(MaterialPageRoute(
-        builder: (ctx) => MiningModePage(
-          castSession: controller, subtitles: subs,
-          onExitMining: () async { await controller.stop(); Navigator.pop(ctx); },
+        builder: (ctx) => _CastSetupPage(
+          deviceName: target.name,
           appModel: appModel,
+          setupFuture: _connectAndLoad(
+            target: target,
+            item: item,
+            jItemFuture: jItemFuture,
+          ),
         ),
       ));
     } catch (e) {
@@ -586,7 +507,117 @@ class PlayerJellyfinSource extends PlayerMediaSource {
           SnackBar(content: Text('Cast failed: $e')));
       }
     }
-      _isDiscovering = false;
+    _isDiscovering = false;
+  }
+
+  /// Performs all async setup (item fetch, subtitles, device connection)
+  /// and returns the ready-to-use [CastSession] and subtitles.
+  ///
+  /// This runs while [_CastSetupPage] shows a loading spinner, so the user
+  /// never sees a white screen.
+  Future<_CastSetupResult> _connectAndLoad({
+    required CastTarget target,
+    required MediaItem item,
+    required Future<server_core.MediaItem> jItemFuture,
+  }) async {
+    debugPrint('[Cast+Mine] Connecting to ${target.name}...');
+
+    final jItem = await jItemFuture;
+
+    final extra = jsonDecode(item.extra ?? '{}') as Map<String, dynamic>;
+    var msId = extra['mediaSourceId'] as String? ?? '';
+    if (msId.isEmpty) {
+      msId = jItem.mediaSources.isNotEmpty ? jItem.mediaSources.first.id : '';
+    }
+    if (msId.isEmpty) throw Exception('No media source.');
+
+    // Load subtitles.
+    final subs = <SubtitleItem>[];
+    try {
+      final service = SubtitleService(
+        (iid, sid, idx) => _c.playbackApi.getSubtitleContent(iid, sid, idx),
+      );
+      subs.addAll(await service.loadSubtitles(
+        itemId: item.mediaIdentifier,
+        subtitleStreams: jItem.mediaStreams
+            .where((s) => s.type == 'Subtitle')
+            .map((s) => SubtitleStreamMeta(
+                  index: s.index,
+                  codec: s.codec,
+                  displayTitle: s.displayTitle,
+                  language: s.language,
+                  isExternal: s.isExternal ?? false,
+                  deliveryUrl: s.deliveryUrl,
+                ))
+            .toList(),
+        mediaSourceId: msId,
+      ));
+    } catch (_) {}
+
+    // Chromecast (Google Cast via mDNS / CastV2 protocol).
+    if (target.isChromecast) {
+      debugPrint('[Cast+Mine] → Chromecast path: ${target.name}');
+      final chromecastDevice = target.chromecastDevice ??
+          ChromecastDevice(
+            name: target.ssdpDevice?.name ?? target.name,
+            host: target.ssdpDevice?.ip ?? '',
+            port: target.ssdpDevice?.port ?? 8009,
+            id: target.ssdpDevice?.ip ?? '',
+          );
+
+      final streamUrl = _c.playbackApi.getStreamUrl(item.mediaIdentifier, msId);
+      debugPrint('[Cast+Mine] Stream URL: $streamUrl');
+      final ctrl = await ChromecastController.connect(
+        device: chromecastDevice,
+        streamUrl: streamUrl,
+        contentType: 'video/mp4',
+        title: item.title ?? target.name,
+      );
+      if (ctrl == null) {
+        throw Exception('Chromecast connection failed.');
+      }
+      debugPrint('[Cast+Mine] ✅ Chromecast connected');
+      return _CastSetupResult(castSession: ctrl, subtitles: subs);
+    }
+
+    // DLNA (UPnP / SOAP — CDATA fix applied).
+    if (target.isDlna && target.ssdpDevice?.locationUrl != null) {
+      debugPrint('[Cast+Mine] → DLNA path: ${target.name}');
+      final streamUrl = _c.playbackApi.getStreamUrl(item.mediaIdentifier, msId);
+      final ctrl = await DlnaController.connect(
+        streamUrl: streamUrl,
+        deviceLocationUrl: target.ssdpDevice!.locationUrl!,
+        deviceName: target.ssdpDevice!.name,
+        dlnaDevice: target.ssdpDevice!.dlnaDevice,
+      );
+      if (ctrl == null) {
+        throw Exception('DLNA connection failed.');
+      }
+      debugPrint('[Cast+Mine] ✅ DLNA connected');
+      return _CastSetupResult(castSession: ctrl, subtitles: subs);
+    }
+
+    // Jellyfin cast.
+    if (!target.isJellyfin || target.jellyfinDevice == null) {
+      throw Exception('Invalid cast target.');
+    }
+    debugPrint('[Cast+Mine] → Jellyfin cast path: ${target.jellyfinDevice!.name}');
+    final dev = target.jellyfinDevice!;
+    final controller = CastController(
+      sessionApi: _c.sessionApi,
+      deviceId: dev.id,
+      deviceName: dev.name,
+    );
+    final ok = await controller.startPlayback(
+      itemId: item.mediaIdentifier,
+      mediaSourceId: msId,
+    );
+    if (!ok) {
+      throw Exception('Could not start playback on ${dev.name}.');
+    }
+    debugPrint('[Cast+Mine] ✅ Jellyfin cast started');
+    await Future.delayed(const Duration(seconds: 2));
+    return _CastSetupResult(castSession: controller, subtitles: subs);
   }
 
   // ─── Image / Audio Generation (Mining) ──────────────────────────────────
@@ -653,6 +684,147 @@ class PlayerJellyfinSource extends PlayerMediaSource {
     _browseCache.clear();
     _itemCache.clear();
     _subtitleCache.clear();
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Cast Setup — immediate page transition (no white screen)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Holds the result of connecting to a cast device + loading subtitles.
+class _CastSetupResult {
+  final CastSession castSession;
+  final List<SubtitleItem> subtitles;
+
+  const _CastSetupResult({
+    required this.castSession,
+    required this.subtitles,
+  });
+}
+
+/// A lightweight page shown immediately after the user picks a cast device.
+///
+/// Displays a "Connecting..." spinner while [setupFuture] runs in the
+/// background. When the future completes, transitions seamlessly to
+/// [MiningModePage]. If it fails, shows an error with a back button.
+///
+/// This replaces the old behavior where the user would see a white screen
+/// (the player page behind the picker) for 2-5 seconds while subtitles
+/// loaded and the cast session was established.
+class _CastSetupPage extends StatefulWidget {
+  final String deviceName;
+  final AppModel appModel;
+  final Future<_CastSetupResult> setupFuture;
+
+  const _CastSetupPage({
+    required this.deviceName,
+    required this.appModel,
+    required this.setupFuture,
+  });
+
+  @override
+  State<_CastSetupPage> createState() => _CastSetupPageState();
+}
+
+class _CastSetupPageState extends State<_CastSetupPage> {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: FutureBuilder<_CastSetupResult>(
+        future: widget.setupFuture,
+        builder: (context, snapshot) {
+          // Error state.
+          if (snapshot.hasError) {
+            return SafeArea(
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.error_outline, color: Colors.red, size: 64),
+                    const SizedBox(height: 24),
+                    Text(
+                      'Could not connect to\n${widget.deviceName}',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Colors.white, fontSize: 18),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      '${snapshot.error}',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Colors.white38, fontSize: 13),
+                    ),
+                    const SizedBox(height: 32),
+                    ElevatedButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Back'),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
+
+          // Loading state.
+          if (!snapshot.hasData) {
+            return SafeArea(
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const SizedBox(
+                      width: 48,
+                      height: 48,
+                      child: CircularProgressIndicator(
+                        color: Colors.white54,
+                        strokeWidth: 3,
+                      ),
+                    ),
+                    const SizedBox(height: 32),
+                    Text(
+                      'Connecting to',
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.5),
+                        fontSize: 16,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      widget.deviceName,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 40),
+                    Text(
+                      'Loading subtitles…',
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.3),
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
+
+          // Ready — show MiningModePage.
+          final result = snapshot.data!;
+          return MiningModePage(
+            castSession: result.castSession,
+            subtitles: result.subtitles,
+            onExitMining: () async {
+              await result.castSession.stop();
+              if (mounted) Navigator.pop(context);
+            },
+            appModel: widget.appModel,
+          );
+        },
+      ),
+    );
   }
 }
 

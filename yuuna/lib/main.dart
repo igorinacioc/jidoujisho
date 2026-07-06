@@ -129,7 +129,12 @@ class JidoujishoApp extends ConsumerStatefulWidget {
 class _JidoujishoAppState extends ConsumerState<JidoujishoApp>
     with WidgetsBindingObserver {
   final navigatorKey = GlobalKey<NavigatorState>();
-  bool _isMainIntent = false;
+
+  /// Default to true — covers the normal app launch (MAIN intent).
+  /// If the app was launched via SEND/VIEW/etc., the post-frame callback
+  /// will correct this. The user sees HomePage for one frame instead of
+  /// a blank white screen — a much better first-launch experience.
+  bool _isMainIntent = true;
 
   late final StreamSubscription _intentsSubscription;
 

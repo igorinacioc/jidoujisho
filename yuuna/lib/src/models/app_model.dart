@@ -1912,6 +1912,21 @@ class AppModel with ChangeNotifier {
     );
   }
 
+  /// Triggers AnkiDroid sync so newly created cards are pushed to AnkiWeb.
+  ///
+  /// Tries the `com.ichi2.anki.intent.action.SYNC` intent first (silent
+  /// background sync on supported versions). Falls back to opening the
+  /// AnkiDroid app so the user can tap Sync manually.
+  ///
+  /// Called automatically after [addNote] succeeds.
+  Future<void> triggerAnkiSync() async {
+    try {
+      await methodChannel.invokeMethod('requestSync');
+    } catch (_) {
+      // Sync is best-effort — don't bother the user if it fails.
+    }
+  }
+
   /// Used to ask for AnkiDroid database permissions. Should be called at
   /// startup.
   Future<void> requestAnkidroidPermissions() async {
@@ -2148,6 +2163,9 @@ class AppModel with ChangeNotifier {
         toastLength: Toast.LENGTH_SHORT,
         gravity: ToastGravity.BOTTOM,
       );
+
+      // Auto-sync to AnkiWeb so the card appears on PC without manual sync.
+      triggerAnkiSync();
 
       onSuccess.call();
     } on PlatformException {
