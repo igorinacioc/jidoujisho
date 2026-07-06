@@ -150,33 +150,22 @@ public class MainActivity extends AudioServiceActivity {
         System.out.println("Deck: " + deckId);
     }
 
-    /// Tries to trigger AnkiDroid sync via intent, then falls back to
-    /// simply opening AnkiDroid so the user can tap Sync manually.
+    /// Attempts a silent background sync via AnkiDroid's internal intent.
+    /// Does NOT open the AnkiDroid app — if the intent isn't supported,
+    /// AnkiDroid will sync on its own periodic schedule. This keeps the
+    /// mining flow uninterrupted.
     private void requestSync() {
         try {
-            // Method 1: AnkiDroid's internal sync broadcast (most reliable).
             Intent syncIntent = new Intent("com.ichi2.anki.intent.action.SYNC");
             syncIntent.setPackage("com.ichi2.anki");
             if (syncIntent.resolveActivity(getPackageManager()) != null) {
                 startActivity(syncIntent);
-                System.out.println("Triggered AnkiDroid sync via intent");
-                return;
+                System.out.println("Triggered AnkiDroid background sync");
+            } else {
+                System.out.println("AnkiDroid sync intent not available — will sync on schedule");
             }
         } catch (Exception e) {
-            System.out.println("Sync intent failed, falling back to open: " + e.getMessage());
-        }
-
-        try {
-            // Method 2: Open AnkiDroid via launch intent.
-            Intent launchIntent = getPackageManager()
-                .getLaunchIntentForPackage("com.ichi2.anki");
-            if (launchIntent != null) {
-                launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                startActivity(launchIntent);
-                System.out.println("Opened AnkiDroid for manual sync");
-            }
-        } catch (Exception e) {
-            System.out.println("Failed to open AnkiDroid: " + e.getMessage());
+            System.out.println("AnkiDroid sync skipped: " + e.getMessage());
         }
     }
 
