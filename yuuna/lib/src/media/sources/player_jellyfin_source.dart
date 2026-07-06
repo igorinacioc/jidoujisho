@@ -443,21 +443,22 @@ class PlayerJellyfinSource extends PlayerMediaSource {
       debugPrint('[Cast+Mine] Opening picker + starting discovery...');
 
       // Stream controller for device updates — survives refresh.
+      // Only closed when the picker is dismissed, not on discovery completion.
       final deviceController = StreamController<List<CastTarget>>.broadcast();
+      StreamSubscription<List<CastTarget>>? discoverySub;
 
       void startDiscovery({bool clearCache = false}) {
         if (clearCache) {
-          // Force fresh scan — don't emit cached results on refresh.
           DeviceDiscovery.clearCache();
         }
+        // Cancel previous discovery so we don't have two running at once.
+        discoverySub?.cancel();
         final d = DeviceDiscovery(_c.sessionApi);
-        d.discoverIncremental().listen(
+        discoverySub = d.discoverIncremental().listen(
           (devices) {
             if (!deviceController.isClosed) deviceController.add(devices);
           },
-          onDone: () {
-            if (!deviceController.isClosed) deviceController.close();
-          },
+          // NO onDone close — the controller stays open for refresh.
         );
       }
 

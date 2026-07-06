@@ -21,7 +21,8 @@ import 'dlna_discovery_service.dart';
 /// (jUPnP) when the project upgrades beyond Flutter 3.13.5.
 class DeviceDiscovery {
   static const _mdnsTimeout = Duration(seconds: 4);
-  static const _ssdpTimeout = Duration(seconds: 4);
+  // Samsung TVs can be slow to respond to M-SEARCH — keep 8s for reliability.
+  static const _ssdpTimeout = Duration(seconds: 8);
   static const _jellyfinTimeout = Duration(seconds: 5);
 
   final SessionApi _sessionApi;
