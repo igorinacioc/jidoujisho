@@ -13,8 +13,8 @@ import 'dart:io';
 ///
 /// Usage:
 /// ```dart
-/// final proxy = await CastCorsProxy.start('http://192.168.0.73:8096/Videos/...');
-/// print(proxy.publicUrl); // http://192.168.0.100:54321/stream
+/// final proxy = await CastCorsProxy.start('http://<jellyfin-host>:8096/Videos/...');
+/// print(proxy.publicUrl); // http://<local-ip>:54321/stream
 /// // Use this URL as the contentId for Chromecast LOAD.
 /// ```
 class CastCorsProxy {
