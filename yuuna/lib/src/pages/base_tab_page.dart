@@ -29,6 +29,7 @@ abstract class BaseTabPageState<T extends BaseTabPage> extends BasePageState {
 
   /// Refresh this tab.
   void refresh() {
+    if (!mounted) return;
     setState(() {});
   }
 

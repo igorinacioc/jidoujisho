@@ -84,11 +84,47 @@ class DlnaController extends CastSession {
         return null;
       }
 
+      // Stop any existing playback first.
+      // Samsung TVs require STOP before SetAVTransportURI+Play transition,
+      // otherwise they return Error 701 "Transition not available".
+      try {
+        debugPrint('[DlnaController] Sending stop (reset state)...');
+        await wrapper.stop();
+        await Future.delayed(const Duration(milliseconds: 300));
+      } catch (_) {
+        // Stop may fail if nothing is playing — safe to ignore.
+      }
+
       // Set the media URI (uses CDATA internally).
-      await wrapper.setUrl(streamUrl, title: info.friendlyName);
+      debugPrint('[DlnaController] setUrl → $streamUrl');
+      final setUrlResult = await wrapper.setUrl(streamUrl, title: info.friendlyName);
+      final hasFault = setUrlResult.contains('faultcode') || setUrlResult.contains('UPnPError');
+      debugPrint('[DlnaController] setUrl result: ${setUrlResult.length} chars, hasFault=$hasFault');
+      if (hasFault) {
+        debugPrint('[DlnaController] setUrl FAULT: ${setUrlResult.substring(0, 300)}');
+        return null;
+      }
+
+      // Samsung TVs process UPnP commands asynchronously.
+      // A delay prevents Error 701 which occurs when Play arrives
+      // before SetAVTransportURI is fully processed.
+      debugPrint('[DlnaController] Waiting 800ms for TV to process URI...');
+      await Future.delayed(const Duration(milliseconds: 800));
+
+      // Samsung TVs sometimes end up in NO_MEDIA_PRESENT after SetAVTransportURI.
+      // An explicit Stop forces the state to STOPPED, from which Play is valid.
+      try {
+        debugPrint('[DlnaController] Sending post-setUrl stop...');
+        await wrapper.stop();
+        await Future.delayed(const Duration(milliseconds: 300));
+      } catch (_) {
+        // Ignore — harmless if not needed.
+      }
 
       // Start playback.
-      await wrapper.play();
+      debugPrint('[DlnaController] Sending play command...');
+      final playResult = await wrapper.play();
+      debugPrint('[DlnaController] play result: ${playResult.length} chars');
 
       final controller = DlnaController(
         controlUrl: controlUrl,

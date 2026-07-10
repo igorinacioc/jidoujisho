@@ -1,16 +1,19 @@
 /// Playback API contract — streaming URLs and progress reporting.
 abstract class PlaybackApi {
-  /// Returns the direct stream URL for a media item.
+  /// Returns the stream URL for a media item.
   ///
   /// [itemId] is the item to stream.
   /// [mediaSourceId] is the specific media source to use.
   /// [deviceId] is a unique identifier for this device.
   /// [audioCodec] optionally forces a specific audio codec.
+  /// [transcode] if true, requests H.264+AAC+MPEGTS for universal DLNA compatibility.
+  ///   Default false (direct play).
   String getStreamUrl(
     String itemId,
     String mediaSourceId, {
     String? deviceId,
     String? audioCodec,
+    bool transcode = false,
   });
 
   /// Gets the raw subtitle content for a given media item.

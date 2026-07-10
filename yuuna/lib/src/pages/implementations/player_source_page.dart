@@ -105,7 +105,7 @@ class _PlayerSourcePageState extends BaseSourcePageState<PlayerSourcePage>
   }
 
   @override
-  void dispose() async {
+  void dispose() {
     _playPauseSubscription?.cancel();
     _seekSubscription?.cancel();
     _rewindSubscription?.cancel();
@@ -113,7 +113,12 @@ class _PlayerSourcePageState extends BaseSourcePageState<PlayerSourcePage>
 
     WidgetsBinding.instance.removeObserver(this);
 
-    _playerController.dispose();
+    try {
+      _playerController.dispose();
+    } catch (_) {
+      // Controller may not have been initialized if player setup failed
+      // (e.g. YouTube stream hangs on loading).
+    }
 
     super.dispose();
   }

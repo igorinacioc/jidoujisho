@@ -1,4 +1,5 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:json_annotation/json_annotation.dart';
 
 part 'device_models.freezed.dart';
 part 'device_models.g.dart';
@@ -64,10 +65,14 @@ class SessionInfo with _$SessionInfo {
     String? client,
 
     /// Whether playback is currently paused.
-    required bool isPaused,
+    /// Null-safe: Jellyfin returns null for newly created sessions.
+    @JsonKey(defaultValue: false)
+    @Default(false) bool isPaused,
 
     /// Current playback position in ticks (1 tick = 100ns).
-    required int positionTicks,
+    /// Null-safe: Jellyfin returns null for newly created sessions.
+    @JsonKey(defaultValue: 0)
+    @Default(0) int positionTicks,
 
     /// The ID of the item currently playing.
     String? nowPlayingItemId,

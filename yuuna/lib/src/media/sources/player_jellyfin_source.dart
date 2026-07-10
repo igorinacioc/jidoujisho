@@ -565,15 +565,18 @@ class PlayerJellyfinSource extends PlayerMediaSource {
             port: target.ssdpDevice?.port ?? 8009,
             id: target.ssdpDevice?.ip ?? '',
           );
+      debugPrint('[Cast+Mine] Chromecast device: host=${chromecastDevice.host} port=${chromecastDevice.port}');
 
-      final streamUrl = _c.playbackApi.getStreamUrl(item.mediaIdentifier, msId);
-      debugPrint('[Cast+Mine] Stream URL: $streamUrl');
+      final streamUrl = _c.playbackApi.getStreamUrl(item.mediaIdentifier, msId, transcode: true);
+      debugPrint('[Cast+Mine] Stream URL (transcoded): $streamUrl');
+      debugPrint('[Cast+Mine] Calling ChromecastController.connect...');
       final ctrl = await ChromecastController.connect(
         device: chromecastDevice,
         streamUrl: streamUrl,
         contentType: 'video/mp4',
         title: item.title ?? target.name,
       );
+      debugPrint('[Cast+Mine] ChromecastController.connect returned: ${ctrl != null ? "OK" : "NULL"}');
       if (ctrl == null) {
         throw Exception('Chromecast connection failed.');
       }
@@ -584,13 +587,20 @@ class PlayerJellyfinSource extends PlayerMediaSource {
     // DLNA (UPnP / SOAP — CDATA fix applied).
     if (target.isDlna && target.ssdpDevice?.locationUrl != null) {
       debugPrint('[Cast+Mine] → DLNA path: ${target.name}');
-      final streamUrl = _c.playbackApi.getStreamUrl(item.mediaIdentifier, msId);
+      debugPrint('[Cast+Mine] DLNA device: ip=${target.ssdpDevice!.ip} locationUrl=${target.ssdpDevice!.locationUrl}');
+      debugPrint('[Cast+Mine] DLNA dlnaDevice present: ${target.ssdpDevice!.dlnaDevice != null}');
+      // Use transcoding for universal TV compatibility: H.264+AAC+MPEGTS.
+      // Samsung, LG, and most Smart TVs support this out of the box.
+      final streamUrl = _c.playbackApi.getStreamUrl(item.mediaIdentifier, msId, transcode: true);
+      debugPrint('[Cast+Mine] DLNA stream URL (transcoded): $streamUrl');
+      debugPrint('[Cast+Mine] Calling DlnaController.connect...');
       final ctrl = await DlnaController.connect(
         streamUrl: streamUrl,
         deviceLocationUrl: target.ssdpDevice!.locationUrl!,
         deviceName: target.ssdpDevice!.name,
         dlnaDevice: target.ssdpDevice!.dlnaDevice,
       );
+      debugPrint('[Cast+Mine] DlnaController.connect returned: ${ctrl != null ? "OK" : "NULL"}');
       if (ctrl == null) {
         throw Exception('DLNA connection failed.');
       }
@@ -604,15 +614,19 @@ class PlayerJellyfinSource extends PlayerMediaSource {
     }
     debugPrint('[Cast+Mine] → Jellyfin cast path: ${target.jellyfinDevice!.name}');
     final dev = target.jellyfinDevice!;
+    debugPrint('[Cast+Mine] Jellyfin device: id=${dev.id} name=${dev.name}');
+    debugPrint('[Cast+Mine] Casting item: ${item.mediaIdentifier} mediaSourceId=$msId');
     final controller = CastController(
       sessionApi: _c.sessionApi,
       deviceId: dev.id,
       deviceName: dev.name,
     );
+    debugPrint('[Cast+Mine] Calling CastController.startPlayback...');
     final ok = await controller.startPlayback(
       itemId: item.mediaIdentifier,
       mediaSourceId: msId,
     );
+    debugPrint('[Cast+Mine] startPlayback returned: $ok');
     if (!ok) {
       throw Exception('Could not start playback on ${dev.name}.');
     }
@@ -728,6 +742,20 @@ class _CastSetupPage extends StatefulWidget {
 }
 
 class _CastSetupPageState extends State<_CastSetupPage> {
+  bool _playerWasPaused = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Pause the local player immediately when entering cast mode.
+    // The phone becomes a subtitle display + remote control only.
+    final vlc = widget.appModel.currentPlayerController;
+    if (vlc != null && vlc.isPlaying) {
+      vlc.pause();
+      _playerWasPaused = true;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -819,6 +847,10 @@ class _CastSetupPageState extends State<_CastSetupPage> {
             subtitles: result.subtitles,
             onExitMining: () async {
               await result.castSession.stop();
+              // Resume local player if we paused it for cast mode.
+              if (_playerWasPaused) {
+                widget.appModel.currentPlayerController?.play();
+              }
               if (mounted) Navigator.pop(context);
             },
             appModel: widget.appModel,

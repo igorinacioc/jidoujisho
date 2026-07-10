@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:server_core/server_core.dart';
 
 /// Jellyfin implementation of [SessionApi].
@@ -46,20 +47,39 @@ class JellyfinSessionApi implements SessionApi {
     String mediaSourceId,
     String deviceId,
   ) async {
-    await _dio.post('/Sessions/Playing', data: {
-      'ItemId': itemId,
-      'PlayMethod': 'Transcode',
-      'CanSeek': true,
-      'MediaSourceId': mediaSourceId,
-      'DeviceId': deviceId,
-    });
+    debugPrint('[JellyfinAPI] startPlayback: itemId=$itemId deviceId=$deviceId msId=$mediaSourceId');
 
-    // Poll for session creation with retry (up to 5 attempts, 1s between).
+    try {
+      final existingSession = await getSession(deviceId);
+      debugPrint('[JellyfinAPI] Existing session: ${existingSession != null ? existingSession.id : "NONE"}');
+    } catch (e) {
+      debugPrint('[JellyfinAPI] getSession check failed: $e');
+    }
+
+    try {
+      final response = await _dio.post('/Sessions/Playing', data: {
+        'ItemIds': [itemId],
+        'PlayCommand': 'PlayNow',
+        'MediaSourceId': mediaSourceId,
+        'DeviceId': deviceId,
+      });
+      debugPrint('[JellyfinAPI] POST /Sessions/Playing → status=${response.statusCode}');
+    } catch (e) {
+      debugPrint('[JellyfinAPI] POST /Sessions/Playing ERROR: $e');
+      return null;
+    }
+
     for (int i = 0; i < 5; i++) {
       await Future.delayed(const Duration(seconds: 1));
-      final session = await getSession(deviceId);
-      if (session != null) return session.id;
+      try {
+        final session = await getSession(deviceId);
+        debugPrint('[JellyfinAPI] Poll $i/5: session=${session != null ? session.id : "NULL"}');
+        if (session != null) return session.id;
+      } catch (e) {
+        debugPrint('[JellyfinAPI] Poll $i/5 ERROR: $e');
+      }
     }
+    debugPrint('[JellyfinAPI] startPlayback FAILED: device=$deviceId');
     return null;
   }
 

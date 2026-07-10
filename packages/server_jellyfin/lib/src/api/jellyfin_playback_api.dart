@@ -19,14 +19,26 @@ class JellyfinPlaybackApi implements PlaybackApi {
     String mediaSourceId, {
     String? deviceId,
     String? audioCodec,
+    bool transcode = false,
   }) {
     final params = <String, String>{
       'MediaSourceId': mediaSourceId,
       'ApiKey': _token,
-      'Static': 'true', // Direct play — preserves all audio tracks, no transcode delay.
     };
+
+    if (transcode) {
+      // Universal DLNA-compatible transcoding: H.264 video + AAC audio in MPEG-TS.
+      // Samsung, LG, and most Smart TVs support this combination.
+      params['VideoCodec'] = 'h264';
+      params['AudioCodec'] = audioCodec ?? 'aac';
+      params['TranscodingContainer'] = 'ts';
+    } else {
+      // Direct play — preserves original quality, all audio/subtitle tracks.
+      params['Static'] = 'true';
+    }
+
     if (deviceId != null) params['DeviceId'] = deviceId;
-    if (audioCodec != null) params['AudioCodec'] = audioCodec;
+    if (!transcode && audioCodec != null) params['AudioCodec'] = audioCodec;
 
     final query = params.entries.map((e) => '${e.key}=${e.value}').join('&');
     return '$_baseUrl/Videos/$itemId/stream?$query';

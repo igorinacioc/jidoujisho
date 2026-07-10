@@ -37,7 +37,7 @@ class DlnaDeviceWrapper {
     <u:SetAVTransportURI xmlns:u="urn:schemas-upnp-org:service:AVTransport:1">
       <InstanceID>0</InstanceID>
       <CurrentURI><![CDATA[$url]]></CurrentURI>
-      <CurrentURIMetaData>$meta</CurrentURIMetaData>
+      <CurrentURIMetaData></CurrentURIMetaData>
     </u:SetAVTransportURI>
   </s:Body>
 </s:Envelope>''';
