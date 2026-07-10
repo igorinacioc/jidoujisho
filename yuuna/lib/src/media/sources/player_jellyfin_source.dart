@@ -750,8 +750,8 @@ class _CastSetupPageState extends State<_CastSetupPage> {
     // Pause the local player immediately when entering cast mode.
     // The phone becomes a subtitle display + remote control only.
     final vlc = widget.appModel.currentPlayerController;
-    if (vlc != null && vlc.isPlaying) {
-      vlc.pause();
+    if (vlc != null) {
+      try { vlc.pause(); } catch (_) {}
       _playerWasPaused = true;
     }
   }
